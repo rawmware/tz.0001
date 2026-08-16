@@ -61,7 +61,7 @@ let localThread = 'Not started';
 let storageUsage = 0;
 let storageQuota = 0;
 let storagePersistent = false;
-const FAST_GPU_MODEL_ID = 'onnx-community/Qwen2.5-0.5B-Instruct';
+const PRIMARY_GPU_MODEL_IDS = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC', 'SmolLM2-360M-Instruct-q4f16_1-MLC', 'SmolLM2-360M-Instruct-q4f32_1-MLC'];
 const FAST_CPU_MODEL_ID = 'onnx-community/SmolLM2-135M-Instruct-ONNX';
 let fastModelId = FAST_CPU_MODEL_ID;
 let cpuGenerator: CpuGenerator | null = null;
@@ -219,7 +219,7 @@ const renderTelemetry = () => {
     $<HTMLElement>('mLocalSpeed').textContent = localTps > 0 ? `${localTps.toFixed(1)}` : '—';
     $<HTMLElement>('mLatency').textContent = last ? `${(last.ms / 1000).toFixed(2)}s` : '—';
     $<HTMLElement>('mFirstToken').textContent = last && last.ttft > 0 ? `first token ${(last.ttft / 1000).toFixed(2)}s` : 'first token —';
-    $<HTMLElement>('mGpu').textContent = adapter ? 'WEBGPU' : cpuGenerator ? cpuDeviceLabel.startsWith('WebNN') ? 'WEBNN' : 'WASM' : webnnAvailable ? 'WEBNN' : 'OFF';
+    $<HTMLElement>('mGpu').textContent = engine ? 'WEBGPU' : cpuGenerator ? 'WASM' : adapter ? 'WEBGPU' : 'OFF';
     $<HTMLElement>('mLoad').textContent = engine || cpuGenerator ? '100%' : enginePromise ? `${loadProgress}%` : cpuPromise ? `${cpuLoadProgress}%` : runtimeError ? 'RETRY' : '0%';
     $<HTMLElement>('mLoadText').textContent = engine ? `WebGPU loaded in ${(loadMs / 1000).toFixed(1)}s` : cpuGenerator ? `${cpuDeviceLabel} loaded in ${(cpuLoadMs / 1000).toFixed(1)}s` : cpuPromise ? cpuLoadText.slice(0, 54) : loadText.slice(0, 54);
     ledger.innerHTML = turns.length ? turns.map(turn => `<tr><td>${turn.id}</td><td>TZ</td><td>${turn.input}</td><td>${turn.output}</td><td>${turn.ms ? `${(turn.ms / 1000).toFixed(2)}s` : 'instant'}</td><td>${turn.tps > 0 ? turn.tps.toFixed(1) : '—'}</td><td>${escapeHtml(turn.route)}</td></tr>`).join('') : '<tr><td colspan="7">No turns yet.</td></tr>';
@@ -270,39 +270,15 @@ const modelIsCompatible = (record: ModelRecordLike, limits: Record<string, numbe
     return !/vision/i.test(record.model_id);
 };
 const planModels = () => {
-    const nav = navigator as Navigator & { deviceMemory?: number; hardwareConcurrency?: number };
-    const mobile = isMobileDevice();
-    const memoryGB = Number(nav.deviceMemory || 0);
-    modelBudgetMB = memoryGB ? Math.max(900, Math.min(mobile ? 1800 : 3600, memoryGB * 1024 * (mobile ? 0.28 : 0.3))) : mobile ? 1450 : 3000;
     const limits = adapter?.limits || {};
     const compatible = prebuiltAppConfig.model_list.filter(record => modelIsCompatible(record, limits));
-    const withinBudget = compatible.filter(record => !modelMemoryMB(record) || modelMemoryMB(record) <= modelBudgetMB);
-    const pool = withinBudget.length ? withinBudget : compatible;
-    const targetB = mobile ? 1.0 : 1.5;
-    const score = (record: ModelRecordLike) => {
-        const id = record.model_id;
-        const size = modelSizeB(id);
-        let value = 140 - Math.abs(size - targetB) * 40;
-        if (/instruct|hermes/i.test(id)) value += 20;
-        if (/llama-3\.2/i.test(id)) value += 10;
-        if (/q4f16_1/i.test(id)) value += 8;
-        if (/q4f32_1/i.test(id)) value += 5;
-        if (mobile && record.low_resource_required) value += 8;
-        if (/smollm/i.test(id) && size < 1) value -= 25;
-        if (/deepseek-r1/i.test(id)) value -= 10;
-        return value;
-    };
-    const ranked = [...pool].sort((a, b) => score(b) - score(a));
-    const primary = ranked[0] || compatible.sort((a, b) => modelMemoryMB(a) - modelMemoryMB(b))[0] || prebuiltAppConfig.model_list[0];
-    const smaller = compatible.filter(record => record.model_id !== primary.model_id && modelMemoryMB(record) <= Math.max(modelMemoryMB(primary), modelBudgetMB)).sort((a, b) => {
-        const aDistance = Math.abs(modelSizeB(a.model_id) - Math.min(1, targetB));
-        const bDistance = Math.abs(modelSizeB(b.model_id) - Math.min(1, targetB));
-        return aDistance - bDistance || modelMemoryMB(a) - modelMemoryMB(b);
-    });
-    modelCandidates = [primary, ...smaller].filter((record, index, all) => all.findIndex(item => item.model_id === record.model_id) === index).slice(0, 4);
+    const preferred = PRIMARY_GPU_MODEL_IDS.map(modelId => compatible.find(record => record.model_id === modelId)).filter((record): record is ModelRecordLike => Boolean(record));
+    const knownFallbacks = compatible.filter(record => /Qwen2\.5-0\.5B-Instruct|SmolLM2-360M-Instruct/i.test(record.model_id)).sort((a, b) => modelMemoryMB(a) - modelMemoryMB(b));
+    modelCandidates = [...preferred, ...knownFallbacks].filter((record, index, all) => all.findIndex(item => item.model_id === record.model_id) === index).slice(0, 4);
     selectedModelRecord = modelCandidates[0] || null;
-    const memoryLabel = selectedModelRecord ? `${Math.round(modelMemoryMB(selectedModelRecord))} MB` : 'unknown memory';
-    modelSelectionReason = selectedModelRecord ? `${mobile ? 'mobile' : 'desktop'} quality target · ${memoryLabel} footprint · loaded only when the prompt needs stronger reasoning` : 'No compatible local model found';
+    modelBudgetMB = selectedModelRecord ? Math.ceil(modelMemoryMB(selectedModelRecord)) : 0;
+    const precision = selectedModelRecord?.model_id.includes('q4f16') ? '4-bit weights + f16 shaders' : selectedModelRecord?.model_id.includes('q4f32') ? '4-bit weights + f32 shaders' : 'compatible WebGPU build';
+    modelSelectionReason = selectedModelRecord ? `production allowlist · ${precision} · one model loaded at a time` : 'No supported WebLLM model was found in this runtime build';
 };
 
 const refreshStorage = async () => {
@@ -321,15 +297,15 @@ const renderRuntime = () => {
     const required = record && Array.isArray(record.required_features) ? record.required_features.map(String) : [];
     const compatible = Boolean(adapter) && required.every(feature => adapterFeatures.has(feature));
     const localReady = Boolean(engine || cpuGenerator);
-    const state = cpuGenerator ? `${cpuDeviceLabel} fast model resident and ready` : engine ? 'WebGPU quality model resident and ready' : cpuPromise ? 'Loading fast local model' : enginePromise ? 'Loading WebGPU quality model' : runtimeError ? 'Local runtime retry available' : adapter ? 'Fast WebGPU lane planned · quality WebLLM on demand' : webnnAvailable ? 'WebGPU unavailable · WebNN fast lane planned' : 'WebGPU unavailable · compact WASM fast lane planned';
-    const plannedBackend = engine ? 'WebGPU / WebLLM quality lane' : cpuGenerator ? `${cpuDeviceLabel} fast lane → WebGPU/WebLLM quality on demand` : adapter ? 'Transformers.js WebGPU q4 fast lane → WebGPU/WebLLM quality lane → WebNN → WASM' : webnnAvailable ? 'WebNN fast lane → WASM' : 'Compact q4/uint8 WASM fast lane';
-    status.textContent = localReady ? 'TZ ready · local runtime loaded' : 'TZ ready';
+    const state = engine ? 'WebGPU model resident and ready' : cpuGenerator ? 'CPU/WASM emergency model resident and ready' : enginePromise ? 'Loading the WebGPU model' : cpuPromise ? 'Loading the CPU/WASM emergency model' : runtimeError ? 'Local runtime needs a retry' : adapter ? 'WebGPU model queued' : 'WebGPU unavailable · CPU/WASM emergency model queued';
+    const plannedBackend = adapter ? 'WebGPU / WebLLM → CPU/WASM only after a real WebGPU failure' : 'CPU/WASM compact emergency path';
+    status.textContent = localReady ? 'TZ ready · running locally' : enginePromise ? `Preparing TZ · ${loadProgress}%` : cpuPromise ? `Preparing fallback · ${cpuLoadProgress}%` : runtimeError ? 'TZ local engine needs a retry' : 'Preparing TZ';
     $<HTMLElement>('activeModelAudit').textContent = engine ? engineModelId : cpuGenerator ? fastModelId : record?.model_id || fastModelId;
-    $<HTMLElement>('localStatus').textContent = engine ? 'Local · quality WebGPU ready' : cpuGenerator ? `Local · fast ${cpuDeviceLabel} ready` : enginePromise ? `Quality WebGPU loading ${loadProgress}%` : cpuPromise ? `Fast local loading ${cpuLoadProgress}%` : runtimeError ? apiConfig ? 'Local retry available · external fallback ready' : 'Local runtime retry available' : adapter ? 'Fast WebGPU lane warming · quality lane on demand' : webnnAvailable ? 'Fast WebNN lane ready to load' : 'Compact WASM lane ready to load';
-    $<HTMLElement>('gpuAudit').textContent = adapter ? 'WebGPU available' : webnnAvailable ? 'WebGPU unavailable · WebNN available' : 'WebGPU unavailable · CPU/WASM fallback';
+    $<HTMLElement>('localStatus').textContent = engine ? 'Local · WebGPU ready' : cpuGenerator ? 'Local · CPU/WASM fallback ready' : enginePromise ? `WebGPU loading ${loadProgress}%` : cpuPromise ? `CPU/WASM loading ${cpuLoadProgress}%` : runtimeError ? apiConfig ? 'Local retry needed · external fallback ready' : 'Local runtime retry needed' : adapter ? 'WebGPU detected · preparing' : 'WebGPU unavailable · preparing CPU/WASM';
+    $<HTMLElement>('gpuAudit').textContent = engine ? 'WebGPU active on this device' : adapter ? 'WebGPU detected · model preparing' : cpuGenerator ? 'WebGPU unavailable · CPU/WASM active' : 'WebGPU unavailable · CPU/WASM fallback';
     const loadPct = engine || cpuGenerator ? '100%' : cpuPromise ? `${cpuLoadProgress}%` : `${loadProgress}%`;
     const initMs = engine ? loadMs : cpuGenerator ? cpuLoadMs : 0;
-    runtimeDetail.innerHTML = `<div><dt>Local state</dt><dd>${escapeHtml(state)}</dd></div><div><dt>Execution funnel</dt><dd>${escapeHtml(plannedBackend)}</dd></div><div><dt>Prompt policy</dt><dd>Short/simple prompts use the fast lane; code, analysis, writing, and long prompts use the quality lane.</dd></div><div><dt>Quality WebGPU model</dt><dd>${escapeHtml(record?.model_id || 'None selected')}</dd></div><div><dt>Fast local model</dt><dd>${escapeHtml(fastModelId)}</dd></div><div><dt>Fast model dtype</dt><dd>${escapeHtml(cpuDtype)}</dd></div><div><dt>WebNN</dt><dd>${webnnAvailable ? 'Browser API exposed · tried before WASM' : 'Not exposed by this browser'}</dd></div><div><dt>WASM threads</dt><dd>${wasmThreads}${self.crossOriginIsolated ? ' · multithread eligible' : ' · cross-origin isolation unavailable'}</dd></div><div><dt>Hardware utilization proof</dt><dd>${escapeHtml(measuredLocalBackend ? `${measuredLocalBackend} measured during a local generation on this device` : 'Waiting for the first successful local generation')}</dd></div><div><dt>Last local lane</dt><dd>${escapeHtml(localLane)}</dd></div><div><dt>Selection policy</dt><dd>${escapeHtml(modelSelectionReason)}</dd></div><div><dt>Local memory budget</dt><dd>${modelBudgetMB ? `${Math.round(modelBudgetMB)} MB` : '—'}</dd></div><div><dt>Model memory target</dt><dd>${record && modelMemoryMB(record) ? `${(modelMemoryMB(record) / 1024).toFixed(2)} GB` : 'Unknown'}</dd></div><div><dt>Load progress</dt><dd>${loadPct}</dd></div><div><dt>Initialization time</dt><dd>${initMs ? `${(initMs / 1000).toFixed(2)} s` : '—'}</dd></div><div><dt>Execution thread</dt><dd>${escapeHtml(localThread)}</dd></div><div><dt>Measured local speed</dt><dd>${localTps ? `${localTps.toFixed(1)} tok/s` : '—'}</dd></div><div><dt>Measured first visible output</dt><dd>${localTtft ? `${(localTtft / 1000).toFixed(2)} s` : '—'}</dd></div><div><dt>Cache backend</dt><dd>Browser-managed model cache</dd></div><div><dt>Model storage</dt><dd>${storagePersistent ? 'Browser marked persistent' : 'Browser-managed cache'}</dd></div><div><dt>Origin storage</dt><dd>${storageQuota ? `${(storageUsage / 1024 / 1024).toFixed(0)} MB / ${(storageQuota / 1024 / 1024 / 1024).toFixed(1)} GB` : 'Unavailable'}</dd></div><div><dt>WebGPU compatibility</dt><dd>${compatible ? 'Compatible' : adapter ? 'GPU model fallback may be required' : 'No adapter exposed by browser'}</dd></div><div><dt>Runtime stats</dt><dd>${escapeHtml(localRuntimeStats.slice(0, 220))}</dd></div>${runtimeError ? `<div><dt>Last local error</dt><dd>${escapeHtml(runtimeError)}</dd></div>` : ''}`;
+    runtimeDetail.innerHTML = `<div><dt>Local state</dt><dd>${escapeHtml(state)}</dd></div><div><dt>Execution order</dt><dd>${escapeHtml(plannedBackend)}</dd></div><div><dt>Memory policy</dt><dd>Only one language model is loaded at a time.</dd></div><div><dt>Primary WebGPU model</dt><dd>${escapeHtml(record?.model_id || 'No compatible WebGPU model selected')}</dd></div><div><dt>Emergency CPU model</dt><dd>${escapeHtml(FAST_CPU_MODEL_ID)}</dd></div><div><dt>Selection policy</dt><dd>${escapeHtml(modelSelectionReason)}</dd></div><div><dt>WebNN detection</dt><dd>${webnnAvailable ? 'Browser API exposed · WebGPU remains preferred' : 'Not exposed by this browser'}</dd></div><div><dt>WASM threads</dt><dd>${wasmThreads}${self.crossOriginIsolated ? ' · multithread eligible' : ' · single-thread compatibility mode'}</dd></div><div><dt>Hardware utilization proof</dt><dd>${escapeHtml(measuredLocalBackend ? `${measuredLocalBackend} measured during generation on this device` : 'Waiting for the first successful local generation')}</dd></div><div><dt>Loaded model</dt><dd>${escapeHtml(engineModelId || 'Not loaded yet')}</dd></div><div><dt>Model memory target</dt><dd>${record && modelMemoryMB(record) ? `${(modelMemoryMB(record) / 1024).toFixed(2)} GB` : 'Unknown'}</dd></div><div><dt>Load progress</dt><dd>${loadPct}</dd></div><div><dt>Initialization time</dt><dd>${initMs ? `${(initMs / 1000).toFixed(2)} s` : '—'}</dd></div><div><dt>Execution thread</dt><dd>${escapeHtml(localThread)}</dd></div><div><dt>Measured local speed</dt><dd>${localTps ? `${localTps.toFixed(1)} tok/s` : '—'}</dd></div><div><dt>Measured first visible output</dt><dd>${localTtft ? `${(localTtft / 1000).toFixed(2)} s` : '—'}</dd></div><div><dt>Cache backend</dt><dd>Browser-managed model cache</dd></div><div><dt>Model storage</dt><dd>${storagePersistent ? 'Browser marked persistent' : 'Browser-managed cache'}</dd></div><div><dt>Origin storage</dt><dd>${storageQuota ? `${(storageUsage / 1024 / 1024).toFixed(0)} MB / ${(storageQuota / 1024 / 1024 / 1024).toFixed(1)} GB` : 'Unavailable'}</dd></div><div><dt>WebGPU compatibility</dt><dd>${compatible ? 'Compatible' : adapter ? 'Trying a compatible model build' : 'No adapter exposed by browser'}</dd></div><div><dt>Runtime stats</dt><dd>${escapeHtml(localRuntimeStats.slice(0, 220))}</dd></div>${runtimeError ? `<div><dt>Last local error</dt><dd>${escapeHtml(runtimeError)}</dd></div>` : ''}`;
     renderTelemetry();
 };
 
@@ -379,7 +355,7 @@ const ensureCpu = async () => {
         wasmThreads = self.crossOriginIsolated ? Math.max(1, Math.min(8, nav.hardwareConcurrency || 4)) : 1;
         const onnxBackend = (env.backends as any).onnx;
         if (onnxBackend?.wasm) onnxBackend.wasm.numThreads = wasmThreads;
-        const routes = [...(adapter ? [{ device: 'webgpu', label: 'WebGPU / Transformers.js q4', model: FAST_GPU_MODEL_ID, dtype: 'q4' }, { device: 'webgpu', label: 'WebGPU / Transformers.js uint8', model: FAST_GPU_MODEL_ID, dtype: 'uint8' }] : []), ...(webnnAvailable ? [{ device: 'webnn-gpu', label: 'WebNN GPU q4', model: FAST_GPU_MODEL_ID, dtype: 'q4' }, { device: 'webnn-npu', label: 'WebNN NPU q4', model: FAST_GPU_MODEL_ID, dtype: 'q4' }, { device: 'webnn-cpu', label: 'WebNN CPU q4', model: FAST_GPU_MODEL_ID, dtype: 'q4' }] : []), { device: 'wasm', label: 'CPU / WebAssembly q4', model: FAST_CPU_MODEL_ID, dtype: 'q4' }, { device: 'wasm', label: 'CPU / WebAssembly uint8', model: FAST_CPU_MODEL_ID, dtype: 'uint8' }];
+        const routes = [{ device: 'wasm', label: 'CPU / WebAssembly q4', model: FAST_CPU_MODEL_ID, dtype: 'q4' }, { device: 'wasm', label: 'CPU / WebAssembly uint8', model: FAST_CPU_MODEL_ID, dtype: 'uint8' }];
         let lastError = 'No local fallback route succeeded';
         for (const route of routes) {
             try {
@@ -501,7 +477,7 @@ const loadHardware = async () => {
     webnnAvailable = Boolean(nav.ml);
     wasmThreads = self.crossOriginIsolated ? Math.max(1, Math.min(8, nav.hardwareConcurrency || 4)) : 1;
     try {
-        adapter = await nav.gpu?.requestAdapter() || null;
+        adapter = await nav.gpu?.requestAdapter({ powerPreference: 'high-performance' }) || await nav.gpu?.requestAdapter() || null;
     } catch {
         adapter = null;
     }
@@ -539,7 +515,7 @@ const loadHardware = async () => {
     ];
     hardware.innerHTML = rows.map(([key, value]) => `<div><dt>${escapeHtml(key)}</dt><dd>${escapeHtml(String(value))}</dd></div>`).join('');
     renderRuntime();
-    if (!engine && !enginePromise && !cpuGenerator && !cpuPromise) setTimeout(() => { if (!engine && !enginePromise && !cpuGenerator && !cpuPromise) void ensureCpu().catch(() => undefined); }, 300);
+    if (!engine && !enginePromise && !cpuGenerator && !cpuPromise) setTimeout(() => { if (engine || enginePromise || cpuGenerator || cpuPromise) return; if (adapter) void ensureTZ().then(() => { if (!engine) return ensureCpu(); }).catch(() => ensureCpu().catch(() => undefined)); else void ensureCpu().catch(() => undefined); }, 300);
 };
 
 const webgpuGenerate = async (messages: Msg[], onUpdate: (text: string) => void) => {
@@ -551,8 +527,11 @@ const webgpuGenerate = async (messages: Msg[], onUpdate: (text: string) => void)
     let first = 0;
     let lastPaint = 0;
     const started = performance.now();
-    const localMessages = [{ role: 'system' as const, content: tzSystemPrompt }, ...messages.map(message => ({ role: message.role, content: message.content }))];
-    const stream = await localEngine.chat.completions.create({ messages: localMessages, stream: true, stream_options: { include_usage: true }, temperature: 0.35, top_p: 0.9 });
+    const recentMessages = messages.slice(-6);
+    const localMessages = [{ role: 'system' as const, content: tzSystemPrompt }, ...recentMessages.map(message => ({ role: message.role, content: message.content }))];
+    const lastUser = [...recentMessages].reverse().find(message => message.role === 'user')?.content || '';
+    const maxTokens = /\b(code|script|function|email|letter|write|draft|explain|steps|list)\b/i.test(lastUser) ? 256 : 128;
+    const stream = await localEngine.chat.completions.create({ messages: localMessages, stream: true, stream_options: { include_usage: true }, max_tokens: maxTokens, temperature: 0.35, top_p: 0.9 });
     for await (const chunk of stream) {
         const delta = chunk.choices[0]?.delta?.content || '';
         if (delta && !first) first = performance.now();
@@ -618,35 +597,25 @@ const cpuGenerate = async (messages: Msg[], onUpdate: (text: string) => void) =>
     return { text, usage: undefined, ttft: localTtft };
 };
 
-const needsQualityModel = (input: string) => input.trim().length > 280 || /\b(code|script|function|debug|fix|refactor|architecture|typescript|javascript|python|sql|email|letter|write|draft|explain|analy[sz]e|compare|research|reason|plan|strategy|review|steps|detailed|why)\b/i.test(input);
-
 const localGenerate = async (messages: Msg[], onUpdate: (text: string) => void) => {
-    const lastUser = [...messages].reverse().find(message => message.role === 'user')?.content || '';
-    const qualityFirst = Boolean(adapter) && (Boolean(engine) || needsQualityModel(lastUser));
-    let fastFailure = '';
-    let qualityFailure = '';
-    if (qualityFirst) {
+    let webgpuFailure = '';
+    let cpuFailure = '';
+    if (adapter) {
         try {
-            if (!engine && cpuGenerator) await releaseFastModel();
             return await webgpuGenerate(messages, onUpdate);
         } catch (error) {
-            qualityFailure = error instanceof Error ? error.message : String(error);
+            webgpuFailure = error instanceof Error ? error.message : String(error);
         }
+    } else {
+        webgpuFailure = 'Browser exposed no WebGPU adapter';
     }
     try {
         return await cpuGenerate(messages, onUpdate);
     } catch (error) {
-        fastFailure = error instanceof Error ? error.message : String(error);
+        cpuFailure = error instanceof Error ? error.message : String(error);
     }
-    if (!qualityFirst && adapter) {
-        try {
-            return await webgpuGenerate(messages, onUpdate);
-        } catch (error) {
-            qualityFailure = error instanceof Error ? error.message : String(error);
-        }
-    }
-    runtimeError = [qualityFailure ? `Quality WebGPU: ${qualityFailure}` : adapter ? '' : 'Quality WebGPU: browser exposed no adapter', fastFailure ? `Fast local: ${fastFailure}` : ''].filter(Boolean).join(' · ');
-    throw new Error(runtimeError || 'No local model route succeeded');
+    runtimeError = [`WebGPU: ${webgpuFailure}`, `CPU/WASM: ${cpuFailure}`].join(' · ');
+    throw new Error(runtimeError);
 };
 
 const externalGenerate = async (messages: Msg[]) => {
@@ -735,7 +704,7 @@ form.addEventListener('submit', async event => {
     } catch (error) {
         history.pop();
         runtimeError = error instanceof Error ? error.message : String(error);
-        errorEl.textContent = apiConfig ? 'Both local runtimes and your external fallback failed. Open Monitoring for the exact runtime error.' : 'Local WebGPU and CPU/WASM runtimes could not complete this request. Open Monitoring for the exact reason.';
+        errorEl.textContent = apiConfig ? 'Both the local engine and your external fallback failed. Open Monitoring to retry or copy diagnostics.' : 'The local engine could not complete this request. Open Monitoring, tap Retry local engine, or copy diagnostics for support.';
         renderMessages();
         renderRuntime();
     } finally {
@@ -755,6 +724,67 @@ const clearSession = () => {
     renderRuntime();
 };
 $<HTMLButtonElement>('clearBtn').addEventListener('click', clearSession);
+
+const runtimeDiagnostics = () => {
+    const nav = navigator as Navigator & { deviceMemory?: number; hardwareConcurrency?: number; gpu?: unknown };
+    return [
+        'TZ local runtime diagnostic',
+        `Captured: ${new Date().toISOString()}`,
+        `Secure context: ${isSecureContext}`,
+        `Device class: ${detectDeviceFamily()}`,
+        `Browser: ${navigator.userAgent}`,
+        `WebGPU API exposed: ${Boolean(nav.gpu)}`,
+        `WebGPU adapter acquired: ${Boolean(adapter)}`,
+        `Adapter features: ${adapterFeatures.size ? Array.from(adapterFeatures).sort().join(', ') : 'none exposed'}`,
+        `Selected model: ${selectedModelRecord?.model_id || 'none'}`,
+        `Loaded model: ${engineModelId || 'none'}`,
+        `Execution backend: ${measuredLocalBackend || 'not measured'}`,
+        `Cross-origin isolated: ${self.crossOriginIsolated}`,
+        `Logical cores: ${nav.hardwareConcurrency || 'withheld'}`,
+        `Memory hint: ${nav.deviceMemory ? `${nav.deviceMemory} GB` : 'withheld'}`,
+        `Online: ${navigator.onLine}`,
+        `Last local error: ${runtimeError || 'none'}`
+    ].join('\n');
+};
+
+const retryLocalEngine = async () => {
+    const retryButton = $<HTMLButtonElement>('retryRuntimeBtn');
+    const diagnosticStatus = $<HTMLElement>('diagnosticStatus');
+    if (enginePromise || cpuPromise) { diagnosticStatus.textContent = 'TZ is still loading. Current progress is shown above.'; return; }
+    retryButton.disabled = true;
+    diagnosticStatus.textContent = 'Restarting the local engine…';
+    try {
+        const previousEngine = engine as (MLCEngineInterface & { unload?: () => Promise<void> }) | null;
+        engine = null;
+        engineModelId = '';
+        engineWorker?.terminate();
+        engineWorker = null;
+        try { await previousEngine?.unload?.(); } catch { /* best-effort GPU cleanup */ }
+        const previousCpu = cpuGenerator;
+        cpuGenerator = null;
+        try { await previousCpu?.dispose?.(); } catch { /* best-effort WASM cleanup */ }
+        runtimeError = '';
+        loadProgress = 0;
+        cpuLoadProgress = 0;
+        await loadHardware();
+        if (adapter) await ensureTZ();
+        if (!engine) await ensureCpu();
+        if (!engine && !cpuGenerator) throw new Error(runtimeError || 'No local execution path became ready');
+        diagnosticStatus.textContent = engine ? 'Local WebGPU engine ready.' : 'Local CPU/WASM fallback ready.';
+    } catch (error) {
+        runtimeError = error instanceof Error ? error.message : String(error);
+        diagnosticStatus.textContent = `Retry failed: ${runtimeError}`;
+    } finally {
+        retryButton.disabled = false;
+        renderRuntime();
+    }
+};
+$<HTMLButtonElement>('retryRuntimeBtn').addEventListener('click', () => void retryLocalEngine());
+$<HTMLButtonElement>('copyDiagnosticsBtn').addEventListener('click', async () => {
+    await copyText(runtimeDiagnostics());
+    const diagnosticStatus = $<HTMLElement>('diagnosticStatus');
+    diagnosticStatus.textContent = 'Diagnostics copied. No prompt text or API key is included.';
+});
 
 const syncApiPanel = () => {
     connectBtn.setAttribute('aria-expanded', String(!connectPanel.hidden));
