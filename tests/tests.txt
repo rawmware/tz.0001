@@ -12,50 +12,50 @@ Steps:
 
 Expected: TZ returns 231 inside a code-style answer box with a visible Copy button; the displayed answer itself does not contain triple-backtick Markdown fence characters.
 
-## Test 2 - Writing requests use the same copy-first surface
+## Test 2 - Monitoring exposes the local execution funnel
 Viewport: desktop
-Covers: writing workflow, copy-ready answer box, plain-text output
-Description: Verifies a deterministic writing request is presented through the same clean copy surface without relying on WebGPU availability in the QA runner.
+Covers: staged fast/quality local routing, explicit Transformers.js WebGPU q4 lane, WebLLM quality-on-demand lane, WebNN detection, compact q4/uint8 WASM fallback, WASM threading telemetry, per-device execution proof, no user model selector
+Description: Verifies TZ warms a small quantized local model first and only loads the stronger WebLLM model when prompt complexity requires it, without keeping multiple heavyweight LLMs resident.
 
 Steps:
-1. Enter "Write the name roman and make it look cool" and submit
-2. Inspect the assistant response
-3. Inspect the response controls
+1. Open Monitoring
+2. Inspect Your hardware, Local inference, and TZ execution
+3. Inspect the page for a model picker or manual local-runtime selector
 
-Expected: TZ returns multiple styled treatments of ROMAN inside the code-style answer box with a visible Copy button and no Markdown code fences.
+Expected: Monitoring exposes a prompt-aware execution funnel, onnx-community/Qwen2.5-0.5B-Instruct as the fast GPU-capable model, onnx-community/SmolLM2-135M-Instruct-ONNX as the compact WASM fallback, q4 as the preferred fast dtype with uint8 fallback, a separate quality WebGPU model selected on demand, WASM thread eligibility, and Hardware utilization proof; no model picker is present.
 
-## Test 3 - Privacy copy accurately describes local browser execution
+## Test 3 - Privacy copy distinguishes browser cache from session state
 Viewport: mobile
-Covers: privacy disclosure, browser model cache, no manual installer, no hidden cloud fallback
-Description: Verifies TZ clearly explains what local means without falsely claiming model bytes never reach the device.
+Covers: local browser execution, model cache disclosure, refresh session reset, no installer/downloads folder claim
+Description: Verifies TZ accurately explains how local browser inference is stored and what refresh clears.
 
 Steps:
 1. Open Monitoring
-2. Read the privacy statement
-3. Inspect Local inference and Model storage
+2. Read the Local means this device statement
+3. Inspect Your hardware and Local inference
 
-Expected: The page states that local means this device, no account/subscription/manual installer is required, model assets load into browser cache, prompts are not sent or stored by TZ servers, and model storage does not request persistence.
+Expected: The page states there is no installer or file saved to Downloads, model assets use browser-managed cache, chat and any API key reset on refresh, and the model cache remains to improve startup speed.
 
-## Test 4 - Default AI path remains local only
+## Test 4 - External AI is an opt-in fallback rather than the default route
 Viewport: desktop
-Covers: on-device WebLLM routing, hardware telemetry, execution ledger, removal of app-funded AI
-Description: Verifies the local runtime remains the default and monitoring exposes real hardware/runtime statistics.
+Covers: local-first routing, visitor-supplied external fallback, execution disclosure, in-tab key handling
+Description: Verifies connecting external AI does not replace instant or on-device execution.
 
 Steps:
-1. Open Monitoring
-2. Inspect TZ execution, Local inference, Your hardware, and the Turn ledger
-3. Inspect the page for built-in cloud fallback wording
+1. Open Monitoring and click Connect fallback
+2. Enter "https://example.com/v1" as the endpoint, "example-model" as the model, and "example-key" as the key
+3. Submit the fallback form and inspect the status text
 
-Expected: Monitoring exposes local inference, WebGPU/device statistics and optional external AI controls, with no TZ Assist or app-funded AI execution option.
+Expected: TZ says the external fallback is connected, the key is held in memory for the tab, and TZ will still try instant and on-device execution first.
 
-## Test 5 - External AI remains visitor-controlled and rejects insecure endpoints
+## Test 5 - External fallback rejects insecure endpoints
 Viewport: desktop
-Covers: visitor-supplied external AI, in-tab key handling, HTTPS validation
-Description: Verifies cloud AI is optional, visitor-funded, and guarded against insecure endpoints.
+Covers: HTTPS validation, external provider guardrail, connection form behavior
+Description: Verifies visitor-supplied cloud fallback cannot be configured with an insecure endpoint.
 
 Steps:
-1. Open Monitoring and Connect AI
-2. Enter "http://example.com/v1" as the endpoint with any model/key placeholders
+1. Open Monitoring and click Connect fallback
+2. Enter "http://example.com/v1" as the endpoint with any non-empty model and key placeholders
 3. Submit the form
 
-Expected: TZ rejects the endpoint and visibly says external AI endpoints must use HTTPS; the page states credentials remain in the browser tab.
+Expected: TZ rejects the endpoint and visibly says external AI endpoints must use HTTPS.
