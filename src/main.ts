@@ -605,6 +605,12 @@ const localGenerate = async (messages: Msg[], onUpdate: (text: string) => void) 
             return await webgpuGenerate(messages, onUpdate);
         } catch (error) {
             webgpuFailure = error instanceof Error ? error.message : String(error);
+            const failedEngine = engine as (MLCEngineInterface & { unload?: () => Promise<void> }) | null;
+            engine = null;
+            engineModelId = '';
+            engineWorker?.terminate();
+            engineWorker = null;
+            try { await failedEngine?.unload?.(); } catch { /* best-effort release before WASM fallback */ }
         }
     } else {
         webgpuFailure = 'Browser exposed no WebGPU adapter';
