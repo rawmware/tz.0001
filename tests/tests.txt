@@ -1,61 +1,61 @@
 # Tests
 
-## Test 1 - TZ instant tools remain local and useful [sanity]
+## Test 1 - Every TZ answer is copy-ready by default [sanity]
 Viewport: mobile
-Covers: instant tools, arithmetic, creative text, zero-cloud fast path
-Description: Verifies deterministic requests are answered immediately without requiring any cloud AI service.
+Covers: assistant copy box, one-tap Copy control, plain-text output, instant local tools
+Description: Verifies TZ presents answers as clean copy-ready content without requiring the model to emit Markdown fences.
 
 Steps:
 1. Enter "What is 77x3" and submit
-2. Enter "Write the name roman and make it look cool" and submit
-3. Inspect both answers
+2. Inspect the assistant response
+3. Inspect the response controls
 
-Expected: TZ returns 231 for the arithmetic and multiple styled treatments of ROMAN immediately.
+Expected: TZ returns 231 inside a code-style answer box with a visible Copy button; the displayed answer itself does not contain triple-backtick Markdown fence characters.
 
-## Test 2 - Default AI path is local only
+## Test 2 - Writing requests use the same copy-first surface
 Viewport: desktop
-Covers: on-device WebLLM routing, removal of built-in cloud fallback, execution ledger
-Description: Verifies TZ no longer presents or uses a built-in AppDeploy/TZ Assist cloud route.
+Covers: writing workflow, copy-ready answer box, plain-text output
+Description: Verifies a deterministic writing request is presented through the same clean copy surface without relying on WebGPU availability in the QA runner.
 
 Steps:
-1. Open Monitoring
-2. Inspect TZ execution and the Turn ledger headings/content
-3. Inspect the page for cloud fallback wording
+1. Enter "Write the name roman and make it look cool" and submit
+2. Inspect the assistant response
+3. Inspect the response controls
 
-Expected: Monitoring exposes local inference and optional external AI controls, with no "TZ Assist" execution option or built-in cloud fallback shown.
+Expected: TZ returns multiple styled treatments of ROMAN inside the code-style answer box with a visible Copy button and no Markdown code fences.
 
-## Test 3 - Local-unavailable state does not silently spend cloud AI
+## Test 3 - Privacy copy accurately describes local browser execution
 Viewport: mobile
-Covers: local runtime failure state, explicit BYO fallback, no hidden native-AI fallback
-Description: Verifies a device without usable local inference is directed to visitor-supplied AI rather than silently using an app-funded cloud model.
+Covers: privacy disclosure, browser model cache, no manual installer, no hidden cloud fallback
+Description: Verifies TZ clearly explains what local means without falsely claiming model bytes never reach the device.
 
 Steps:
 1. Open Monitoring
-2. Inspect Local inference and API key status
-3. Inspect the Bring your own AI section
+2. Read the privacy statement
+3. Inspect Local inference and Model storage
 
-Expected: The page identifies local runtime state and shows the external provider as optional with no app-owned API key configured; if local inference is unavailable, the UI directs the user to connect their own AI.
+Expected: The page states that local means this device, no account/subscription/manual installer is required, model assets load into browser cache, prompts are not sent or stored by TZ servers, and model storage does not request persistence.
 
-## Test 4 - Monitoring shows actual hardware and performance statistics
+## Test 4 - Default AI path remains local only
 Viewport: desktop
-Covers: hardware telemetry, WebGPU limits, local load progress, storage/cache state, latency and throughput metrics
-Description: Verifies Monitoring continues to expose measurable local device/runtime statistics.
+Covers: on-device WebLLM routing, hardware telemetry, execution ledger, removal of app-funded AI
+Description: Verifies the local runtime remains the default and monitoring exposes real hardware/runtime statistics.
 
 Steps:
 1. Open Monitoring
-2. Inspect the metric cards and Your hardware / Local inference cards
-3. Inspect the page text
+2. Inspect TZ execution, Local inference, Your hardware, and the Turn ledger
+3. Inspect the page for built-in cloud fallback wording
 
-Expected: Monitoring shows Local load, Local speed, Last latency, WebGPU status, CPU cores, GPU limits, storage/cache information, and local inference state.
+Expected: Monitoring exposes local inference, WebGPU/device statistics and optional external AI controls, with no TZ Assist or app-funded AI execution option.
 
-## Test 5 - External provider mode rejects insecure endpoints
+## Test 5 - External AI remains visitor-controlled and rejects insecure endpoints
 Viewport: desktop
-Covers: visitor-funded BYO AI, HTTPS validation, external-mode guardrail
-Description: Verifies cloud AI remains possible only through a visitor-supplied provider configuration and insecure endpoints are rejected.
+Covers: visitor-supplied external AI, in-tab key handling, HTTPS validation
+Description: Verifies cloud AI is optional, visitor-funded, and guarded against insecure endpoints.
 
 Steps:
 1. Open Monitoring and Connect AI
 2. Enter "http://example.com/v1" as the endpoint with any model/key placeholders
 3. Submit the form
 
-Expected: TZ rejects the endpoint and visibly says external AI endpoints must use HTTPS.
+Expected: TZ rejects the endpoint and visibly says external AI endpoints must use HTTPS; the page states credentials remain in the browser tab.
