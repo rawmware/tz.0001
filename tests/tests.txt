@@ -1,57 +1,57 @@
 # Tests
 
-## Test 1 - TZ answers simple failures correctly [sanity]
+## Test 1 - TZ instant tools remain local and useful [sanity]
 Viewport: mobile
-Covers: instant tools, arithmetic, creative text, TZ identity
-Description: Verifies the exact prompts that previously exposed weak-model behavior now return useful answers immediately.
+Covers: instant tools, arithmetic, creative text, zero-cloud fast path
+Description: Verifies deterministic requests are answered immediately without requiring any cloud AI service.
 
 Steps:
 1. Enter "What is 77x3" and submit
 2. Enter "Write the name roman and make it look cool" and submit
 3. Inspect both answers
 
-Expected: TZ returns 231 for the arithmetic and multiple styled treatments of ROMAN without recommending Google Assistant, asking for a programming language, or claiming it cannot do the task.
+Expected: TZ returns 231 for the arithmetic and multiple styled treatments of ROMAN immediately.
 
-## Test 2 - Nontrivial questions use a capable TZ answer
+## Test 2 - Default AI path is local only
 Viewport: desktop
-Covers: POST /api/tz-assist, stronger reasoning mode, intelligent general answering
-Description: Verifies a nontrivial prompt is handled by the capable TZ intelligence path rather than the small local model pretending to know more than it does.
+Covers: on-device WebLLM routing, removal of built-in cloud fallback, execution ledger
+Description: Verifies TZ no longer presents or uses a built-in AppDeploy/TZ Assist cloud route.
 
 Steps:
-1. Enter "Explain why adding RAM can improve a computer but does not always make the CPU faster"
-2. Submit
-3. Inspect the answer
+1. Open Monitoring
+2. Inspect TZ execution and the Turn ledger headings/content
+3. Inspect the page for cloud fallback wording
 
-Expected: TZ explains the distinction between memory capacity/pressure and CPU compute performance in a relevant answer with no generic assistant disclaimer.
+Expected: Monitoring exposes local inference and optional external AI controls, with no "TZ Assist" execution option or built-in cloud fallback shown.
 
-## Test 3 - Refresh does not make TZ unusable
+## Test 3 - Local-unavailable state does not silently spend cloud AI
 Viewport: mobile
-Covers: refresh recovery, background local loading, IndexedDB model cache, cold-start bypass
-Description: Verifies the chat remains useful after a page refresh even while the local WebLLM engine is loading or reinitializing.
+Covers: local runtime failure state, explicit BYO fallback, no hidden native-AI fallback
+Description: Verifies a device without usable local inference is directed to visitor-supplied AI rather than silently using an app-funded cloud model.
 
 Steps:
-1. Refresh the page
-2. Enter "Explain in one sentence what RAM does" and submit
-3. Open Monitoring
+1. Open Monitoring
+2. Inspect Local inference and API key status
+3. Inspect the Bring your own AI section
 
-Expected: TZ returns a relevant answer after refresh; Monitoring shows a concrete local state such as loading, ready, or unavailable rather than leaving the app stuck with no response.
+Expected: The page identifies local runtime state and shows the external provider as optional with no app-owned API key configured; if local inference is unavailable, the UI directs the user to connect their own AI.
 
 ## Test 4 - Monitoring shows actual hardware and performance statistics
 Viewport: desktop
 Covers: hardware telemetry, WebGPU limits, local load progress, storage/cache state, latency and throughput metrics
-Description: Verifies Monitoring emphasizes measurable device/runtime statistics instead of routing marketing copy.
+Description: Verifies Monitoring continues to expose measurable local device/runtime statistics.
 
 Steps:
 1. Open Monitoring
 2. Inspect the metric cards and Your hardware / Local inference cards
 3. Inspect the page text
 
-Expected: Monitoring shows Local load, Local speed, Last latency, WebGPU status, CPU cores, GPU limits, storage/cache information, and local inference state; the phrase "TZ chooses the cheapest capable route" is not present.
+Expected: Monitoring shows Local load, Local speed, Last latency, WebGPU status, CPU cores, GPU limits, storage/cache information, and local inference state.
 
 ## Test 5 - External provider mode rejects insecure endpoints
 Viewport: desktop
-Covers: optional BYO AI, HTTPS validation, external-mode guardrail
-Description: Verifies optional provider connectivity remains explicit and secure.
+Covers: visitor-funded BYO AI, HTTPS validation, external-mode guardrail
+Description: Verifies cloud AI remains possible only through a visitor-supplied provider configuration and insecure endpoints are rejected.
 
 Steps:
 1. Open Monitoring and Connect AI
