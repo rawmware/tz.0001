@@ -12,29 +12,29 @@ Steps:
 
 Expected: TZ returns 231 inside a code-style answer box with a visible Copy button; the displayed answer itself does not contain triple-backtick Markdown fence characters.
 
-## Test 2 - Monitoring exposes the local execution funnel
+## Test 2 - Monitoring exposes one WebGPU-first execution path
 Viewport: desktop
-Covers: staged fast/quality local routing, explicit Transformers.js WebGPU q4 lane, WebLLM quality-on-demand lane, WebNN detection, compact q4/uint8 WASM fallback, WASM threading telemetry, per-device execution proof, no user model selector
-Description: Verifies TZ warms a small quantized local model first and only loads the stronger WebLLM model when prompt complexity requires it, without keeping multiple heavyweight LLMs resident.
+Covers: deterministic WebGPU-first loading, known supported Qwen WebLLM model, single-model memory policy, CPU/WASM emergency fallback, hardware proof, no model selector
+Description: Verifies TZ automatically chooses a compatible production-allowlisted WebGPU build and never warms a second language model alongside it.
 
 Steps:
 1. Open Monitoring
 2. Inspect Your hardware, Local inference, and TZ execution
-3. Inspect the page for a model picker or manual local-runtime selector
+3. Inspect the page for a model picker or manual runtime selector
 
-Expected: Monitoring exposes a prompt-aware execution funnel, onnx-community/Qwen2.5-0.5B-Instruct as the fast GPU-capable model, onnx-community/SmolLM2-135M-Instruct-ONNX as the compact WASM fallback, q4 as the preferred fast dtype with uint8 fallback, a separate quality WebGPU model selected on demand, WASM thread eligibility, and Hardware utilization proof; no model picker is present.
+Expected: Monitoring states WebGPU is the default, shows a Qwen2.5 0.5B WebLLM build as the primary model when compatible, states only one language model is loaded at a time, identifies SmolLM2 135M as the CPU/WASM emergency model, and presents no model picker.
 
-## Test 3 - Privacy copy distinguishes browser cache from session state
+## Test 3 - A failed local runtime has a visible retry and safe diagnostic
 Viewport: mobile
-Covers: local browser execution, model cache disclosure, refresh session reset, no installer/downloads folder claim
-Description: Verifies TZ accurately explains how local browser inference is stored and what refresh clears.
+Covers: local runtime recovery, Retry local engine control, copyable device diagnostic, diagnostic privacy
+Description: Verifies users can recover from a device-specific initialization failure and copy useful runtime facts without leaking prompts or credentials.
 
 Steps:
 1. Open Monitoring
-2. Read the Local means this device statement
-3. Inspect Your hardware and Local inference
+2. Inspect the TZ execution controls
+3. Click Copy diagnostics
 
-Expected: The page states there is no installer or file saved to Downloads, model assets use browser-managed cache, chat and any API key reset on refresh, and the model cache remains to improve startup speed.
+Expected: Retry local engine and Copy diagnostics controls are visible, and the status confirms the copied diagnostic contains no prompt text or API key.
 
 ## Test 4 - External AI is an opt-in fallback rather than the default route
 Viewport: desktop
