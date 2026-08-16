@@ -1,0 +1,61 @@
+# Tests
+
+## Test 1 - TZ answers simple failures correctly [sanity]
+Viewport: mobile
+Covers: instant tools, arithmetic, creative text, TZ identity
+Description: Verifies the exact prompts that previously exposed weak-model behavior now return useful answers immediately.
+
+Steps:
+1. Enter "What is 77x3" and submit
+2. Enter "Write the name roman and make it look cool" and submit
+3. Inspect both answers
+
+Expected: TZ returns 231 for the arithmetic and multiple styled treatments of ROMAN without recommending Google Assistant, asking for a programming language, or claiming it cannot do the task.
+
+## Test 2 - Nontrivial questions use a capable TZ answer
+Viewport: desktop
+Covers: POST /api/tz-assist, stronger reasoning mode, intelligent general answering
+Description: Verifies a nontrivial prompt is handled by the capable TZ intelligence path rather than the small local model pretending to know more than it does.
+
+Steps:
+1. Enter "Explain why adding RAM can improve a computer but does not always make the CPU faster"
+2. Submit
+3. Inspect the answer
+
+Expected: TZ explains the distinction between memory capacity/pressure and CPU compute performance in a relevant answer with no generic assistant disclaimer.
+
+## Test 3 - Refresh does not make TZ unusable
+Viewport: mobile
+Covers: refresh recovery, background local loading, IndexedDB model cache, cold-start bypass
+Description: Verifies the chat remains useful after a page refresh even while the local WebLLM engine is loading or reinitializing.
+
+Steps:
+1. Refresh the page
+2. Enter "Explain in one sentence what RAM does" and submit
+3. Open Monitoring
+
+Expected: TZ returns a relevant answer after refresh; Monitoring shows a concrete local state such as loading, ready, or unavailable rather than leaving the app stuck with no response.
+
+## Test 4 - Monitoring shows actual hardware and performance statistics
+Viewport: desktop
+Covers: hardware telemetry, WebGPU limits, local load progress, storage/cache state, latency and throughput metrics
+Description: Verifies Monitoring emphasizes measurable device/runtime statistics instead of routing marketing copy.
+
+Steps:
+1. Open Monitoring
+2. Inspect the metric cards and Your hardware / Local inference cards
+3. Inspect the page text
+
+Expected: Monitoring shows Local load, Local speed, Last latency, WebGPU status, CPU cores, GPU limits, storage/cache information, and local inference state; the phrase "TZ chooses the cheapest capable route" is not present.
+
+## Test 5 - External provider mode rejects insecure endpoints
+Viewport: desktop
+Covers: optional BYO AI, HTTPS validation, external-mode guardrail
+Description: Verifies optional provider connectivity remains explicit and secure.
+
+Steps:
+1. Open Monitoring and Connect AI
+2. Enter "http://example.com/v1" as the endpoint with any model/key placeholders
+3. Submit the form
+
+Expected: TZ rejects the endpoint and visibly says external AI endpoints must use HTTPS.
