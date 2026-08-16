@@ -10,7 +10,8 @@
     },
     "dependencies": {
         "lucide": "^0.469.0",
-        "@mlc-ai/web-llm": "^0.2.84"
+        "@mlc-ai/web-llm": "^0.2.84",
+        "@huggingface/transformers": "^3.8.1"
     },
     "optionalDependencies": {
         "@rollup/rollup-linux-x64-gnu": "^4.0.0"
