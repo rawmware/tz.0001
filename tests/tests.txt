@@ -1,61 +1,64 @@
 # Tests
 
-## Test 1 - Every TZ answer is copy-ready by default [sanity]
+## Test 1 - Instant answer is copy-ready and Clear cache resets both views [sanity]
 Viewport: mobile
-Covers: assistant copy box, one-tap Copy control, plain-text output, instant local tools
-Description: Verifies TZ presents answers as clean copy-ready content without requiring the model to emit Markdown fences.
+Covers: instant local tools, copy-ready answer, chat Clear cache, shared conversation and ledger reset
+Description: Verifies TZ answers a deterministic local task immediately and both reset controls operate on the same session state.
 
 Steps:
 1. Enter "What is 77x3" and submit
-2. Inspect the assistant response
-3. Inspect the response controls
+2. Inspect the answer and its Copy control
+3. Click Clear cache in Chat
+4. Open Monitoring and inspect the Turn ledger
 
-Expected: TZ returns 231 inside a code-style answer box with a visible Copy button; the displayed answer itself does not contain triple-backtick Markdown fence characters.
+Expected: TZ shows 231 in a clean copy-ready response with a visible Copy button; after Clear cache, the conversation is empty and the Turn ledger says there are no turns.
 
-## Test 2 - Monitoring exposes one WebGPU-first execution path
+## Test 2 - Monitoring describes the stronger device-aware local path
 Viewport: desktop
-Covers: deterministic WebGPU-first loading, known supported Qwen WebLLM model, single-model memory policy, CPU/WASM emergency fallback, hardware proof, no model selector
-Description: Verifies TZ automatically chooses a compatible production-allowlisted WebGPU build and never warms a second language model alongside it.
+Covers: device-aware WebGPU model selection, dedicated worker generation, CPU/WASM emergency model, single-model memory policy
+Description: Verifies the shipped runtime no longer advertises the former 0.5B model as its quality path and clearly describes its execution policy.
 
 Steps:
 1. Open Monitoring
-2. Inspect Your hardware, Local inference, and TZ execution
-3. Inspect the page for a model picker or manual runtime selector
+2. Inspect Intelligence path and TZ execution
+3. Inspect Primary model, Emergency model, Execution thread, and Memory policy
 
-Expected: Monitoring states WebGPU is the default, shows a Qwen2.5 0.5B WebLLM build as the primary model when compatible, states only one language model is loaded at a time, identifies SmolLM2 135M as the CPU/WASM emergency model, and presents no model picker.
+Expected: TZ selects a compatible Qwen 1.5B-class model on mobile or 3B-class model on desktop when available, identifies SmolLM2 360M as the emergency CPU/WASM path, states that only one local language model is resident, and identifies a dedicated Web Worker for quality generation.
 
-## Test 3 - A failed local runtime has a visible retry and safe diagnostic
+## Test 3 - Free provider presets configure a transparent Auto route
+Viewport: desktop
+Covers: free-tier provider presets, OpenRouter free router, response-mode selection, tab-only key handling, execution disclosure
+Description: Verifies connecting an optional provider is explicit, visibly configured, and does not claim that TZ supplies free usage.
+
+Steps:
+1. Open Monitoring and click Connect provider
+2. Select OpenRouter free and Auto · local + smart routing
+3. Enter "example-key" in API key and submit
+4. Inspect the connection status and API key row
+
+Expected: Endpoint and model are populated for OpenRouter, the status says OpenRouter free is connected for this tab with Auto routing active, and the API key row says the key clears on refresh.
+
+## Test 4 - Local-only mode visibly guarantees prompts stay local
 Viewport: mobile
-Covers: local runtime recovery, Retry local engine control, copyable device diagnostic, diagnostic privacy
-Description: Verifies users can recover from a device-specific initialization failure and copy useful runtime facts without leaking prompts or credentials.
+Covers: local-only privacy control, response routing control, refresh-scoped provider configuration
+Description: Verifies the user can connect a provider while explicitly preventing TZ from sending prompts to it.
 
 Steps:
-1. Open Monitoring
-2. Inspect the TZ execution controls
-3. Click Copy diagnostics
+1. Open Monitoring and click Connect provider
+2. Select Local only · never send prompts
+3. Inspect the chat mode label and Intelligence path
 
-Expected: Retry local engine and Copy diagnostics controls are visible, and the status confirms the copied diagnostic contains no prompt text or API key.
+Expected: The active mode is Local only, and Monitoring explains that connected intelligence is not used while Local-only mode is selected.
 
-## Test 4 - External AI is an opt-in fallback rather than the default route
+## Test 5 - Connected intelligence rejects insecure endpoints
 Viewport: desktop
-Covers: local-first routing, visitor-supplied external fallback, execution disclosure, in-tab key handling
-Description: Verifies connecting external AI does not replace instant or on-device execution.
+Covers: HTTPS endpoint validation, provider guardrail, visible configuration error
+Description: Verifies a custom connected provider cannot be configured over an insecure endpoint.
 
 Steps:
-1. Open Monitoring and click Connect fallback
-2. Enter "https://example.com/v1" as the endpoint, "example-model" as the model, and "example-key" as the key
-3. Submit the fallback form and inspect the status text
+1. Open Monitoring and click Connect provider
+2. Select Custom compatible API
+3. Enter "http://example.com/v1" as the endpoint with non-empty model and key values
+4. Submit the form
 
-Expected: TZ says the external fallback is connected, the key is held in memory for the tab, and TZ will still try instant and on-device execution first.
-
-## Test 5 - External fallback rejects insecure endpoints
-Viewport: desktop
-Covers: HTTPS validation, external provider guardrail, connection form behavior
-Description: Verifies visitor-supplied cloud fallback cannot be configured with an insecure endpoint.
-
-Steps:
-1. Open Monitoring and click Connect fallback
-2. Enter "http://example.com/v1" as the endpoint with any non-empty model and key placeholders
-3. Submit the form
-
-Expected: TZ rejects the endpoint and visibly says external AI endpoints must use HTTPS.
+Expected: TZ refuses the configuration and visibly states that connected AI endpoints must use HTTPS.
