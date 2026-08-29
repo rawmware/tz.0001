@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RawmWare.OS Webcam Viewer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap" rel="stylesheet">
+  <style>
+    /* Background Animation Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000000;
+      color: #FFFFFF;
+      font-family: 'Times New Roman', serif;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* Animation Code Windows */
+    .code-window {
+      position: absolute;
+      width: 40vw;
+      max-width: 700px;
+      height: 80vh;
+      max-height: 900px;
+      background-color: rgba(0, 0, 0, 0.95);
+      border-width: 4px;
+      border-style: solid;
+      border-color: #FFFFFF;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      z-index: 5;
+      transition: transform 0.2s ease-out;
+      cursor: move;
+    }
+    
+    .code-window.active {
+      z-index: 10;
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+      border-color: #00ff00;
+    }
+
+    .code-window-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .spawn-button {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background: rgba(0, 255, 0, 0.2);
+      border: 2px solid #00ff00;
+      color: #00ff00;
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      z-index: 100;
+      transition: all 0.3s ease;
+    }
+
+    .spawn-button:hover {
+      background: rgba(0, 255, 0, 0.3);
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+    }
+
+    /* Remove the fixed positioning for initial windows */
+    .window-left, .window-right {
+      position: absolute;
+      transform: none;
+      left: 10vw;
+      top: 10vh;
+    }
+    
+    .window-right {
+      left: 55vw;
+    }
+
+    .window-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 10px;
+      background-color: #000000;
+      border-bottom: 2px solid #FFFFFF;
+    }
+
+    .window-title {
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-size: 0.9em;
+      font-weight: bold;
+      color: #FFFFFF;
+    }
+
+    .window-buttons {
+      display: flex;
+      gap: 5px;
+    }
+
+    .window-button {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid #FFFFFF;
+    }
+
+    .code-content {
+      flex: 1;
+      overflow: hidden;
+      white-space: pre;
+      font-family: 'Courier New', monospace;
+      color: #FFFFFF;
+      font-weight: 600;
+      font-size: 12px;
+      line-height: 1.2;
+      padding: 8px;
+      background-color: #000000;
+    }
+
+    .toolbar {
+      height: 25px;
+      background-color: #000000;
+      border-top: 2px solid #FFFFFF;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      font-size: 10px;
+    }
+
+    .toolbar-item {
+      margin-right: 15px;
+      cursor: pointer;
+      color: #FFFFFF;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 14px;
+      background-color: #FFFFFF;
+      animation: blink 0.8s infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* RawmWare.OS Webcam Window Styles */
+    .rawmware-window {
+      background-color: #c0c0c0;
+      border: 2px outset #ffffff;
+      box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+      width: 800px;
+      height: 600px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      overflow: hidden;
+      z-index: 100;
+      opacity: 0.95;
+    }
+    
+    .title-bar {
+      background: linear-gradient(90deg, #b2a1bd, #635456);
+      color: white;
+      padding: 2px 4px;
+      font-weight: bold;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 18px;
+      user-select: none;
+      cursor: move;
+      font-family: 'MS Sans Serif', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .title-bar-text {
+      margin-left: 4px;
+    }
+    
+    .title-bar-controls {
+      display: flex;
+    }
+    
+    .title-bar-button {
+      background-color: #c0c0c0;
+      border: 1px outset #ffffff;
+      width: 14px;
+      height: 14px;
+      margin-left: 2px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    
+    .content {
+      padding: 4px;
+      height: calc(100% - 26px);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .webcam-container {
+      flex: 1;
+      background-color: #000000;
+      overflow: hidden;
+      position: relative;
+      opacity: 0.85;
+    }
+    
+    /* Webcam code overlay - Left side */
+    .webcam-code-overlay-left {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 50%;
+      bottom: 0;
+      z-index: 20;
+      pointer-events: none;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
+      color: rgba(119, 0, 255, 0.6);
+      font-size: calc(8px + 0.4vw);
+      line-height: 1.1;
+      white-space: pre;
+      text-shadow: 0 0 10px rgb(1, 121, 221);
+      mix-blend-mode: screen;
+      padding: 5px;
+      text-align: left;
+    }
+
+    /* Webcam code overlay - Right side */
+    .webcam-code-overlay-right {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 50%;
+      bottom: 0;
+      z-index: 20;
+      pointer-events: none;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
+      color: rgba(119, 0, 255, 0.6);
+      font-size: calc(8px + 0.4vw);
+      line-height: 1.1;
+      white-space: pre;
+      text-shadow: 0 0 10px rgb(1, 121, 221);
+      mix-blend-mode: screen;
+      padding: 5px;
+      text-align: right;
+      direction: ltr;
+    }
+    
+    /* Webcam texture overlay */
+    .webcam-container::after {
+      display: none;
+    }
+    
+    #webcam {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      mix-blend-mode: normal;
+      transform: scaleX(-1); /* Remove the mirror effect */
+    }
+    
+    /* Remove the enhanced material effect */
+    .webcam-container::before {
+      display: none;
+    }
+    
+    .status-bar {
+      height: 18px;
+      border-top: 1px solid #808080;
+      background-color: #c0c0c0;
+      display: flex;
+      align-items: center;
+      padding: 0 4px;
+      font-size: 12px;
+      justify-content: space-between;
+      font-family: 'MS Sans Serif', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .status-bar-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .retry-button {
+      background-color: #c0c0c0;
+      border: 2px outset #ffffff;
+      font-size: 11px;
+      padding: 0 8px;
+      height: 14px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+    }
+    
+    .camera-selector {
+      display: none;
+      position: absolute;
+      bottom: 22px;
+      left: 0;
+      right: 0;
+      background-color: #c0c0c0;
+      border-top: 1px solid #808080;
+      padding: 4px;
+      font-size: 11px;
+      font-family: 'MS Sans Serif', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .camera-dropdown {
+      width: 100%;
+      font-family: 'MS Sans Serif', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 11px;
+      margin-top: 2px;
+    }
+    
+    .camera-label {
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    /* Resize handles */
+    .resize-handle {
+      position: absolute;
+      background: transparent;
+      z-index: 102;
+      pointer-events: auto;
+    }
+
+    .resize-handle-n {
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 8px;
+      cursor: n-resize;
+    }
+
+    .resize-handle-e {
+      top: 0;
+      right: 0;
+      width: 8px;
+      height: 100%;
+      cursor: e-resize;
+    }
+
+    .resize-handle-s {
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 8px;
+      cursor: s-resize;
+    }
+
+    .resize-handle-w {
+      top: 0;
+      left: 0;
+      width: 8px;
+      height: 100%;
+      cursor: w-resize;
+    }
+
+    .resize-handle-ne {
+      top: 0;
+      right: 0;
+      width: 15px;
+      height: 15px;
+      cursor: ne-resize;
+    }
+
+    .resize-handle-se {
+      bottom: 0;
+      right: 0;
+      width: 15px;
+      height: 15px;
+      cursor: se-resize;
+    }
+
+    .resize-handle-sw {
+      bottom: 0;
+      left: 0;
+      width: 15px;
+      height: 15px;
+      cursor: sw-resize;
+    }
+
+    .resize-handle-nw {
+      top: 0;
+      left: 0;
+      width: 15px;
+      height: 15px;
+      cursor: nw-resize;
+    }
+
+    .dragging {
+      opacity: 0.85;
+      box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.5);
+    }
+    
+    .resizing {
+      opacity: 0.85;
+      transition: none;
+    }
+
+    /* Mobile Responsive Adjustments */
+    @media (max-width: 900px) {
+      .code-window {
+        width: 90vw;
+        height: 40vh;
+        position: relative;
+        transform: none !important;
+        margin: 20px auto;
+        left: auto;
+        right: auto;
+        top: auto;
+      }
+      
+      .window-left, .window-right {
+        transform: none !important;
+      }
+    }
+
+    /* Fix for clickability issues */
+    .webcam-container, 
+    .status-bar, 
+    .camera-selector,
+    .title-bar,
+    .title-bar-button {
+      pointer-events: auto;
+    }
+
+    /* Add the subtitle styles after the webcam container styles */
+    .webcam-container {
+      flex: 1;
+      background-color: #000000;
+      overflow: hidden;
+      position: relative;
+      opacity: 0.85;
+    }
+
+    /* Subtitle container */
+    .subtitle-container {
+      position: absolute;
+      bottom: 40px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      z-index: 30;
+      pointer-events: none;
+      text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.8);
+    }
+
+    .subtitle-jp {
+      color: #ff0000;
+      font-size: 16px;
+      font-family: "MS Gothic", "Yu Gothic", sans-serif;
+      margin-bottom: 5px;
+      opacity: 0.9;
+      letter-spacing: 1px;
+    }
+
+    .subtitle-en {
+      color: #ff0000;
+      font-size: 18px;
+      font-family: "Arial", sans-serif;
+      opacity: 0.9;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Background Animation Windows -->
+  <div class="code-window-container">
+    <div class="code-window window-left">
+      <div class="window-header">
+        <div class="window-title">RawmWare.OS - [ScriptLog]</div>
+        <div class="window-buttons">
+          <div class="window-button"></div>
+          <div class="window-button"></div>
+          <div class="window-button"></div>
+        </div>
+      </div>
+      <div class="code-content" id="code-area-1"></div>
+      <div class="toolbar">
+        <span class="toolbar-item">FILE</span>
+        <span class="toolbar-item">EDIT</span>
+        <span class="toolbar-item">VIEW</span>
+        <span class="toolbar-item">TOOLS</span>
+      </div>
+    </div>
+
+    <div class="code-window window-right">
+      <div class="window-header">
+        <div class="window-title">RawmWare.OS - [ScriptLog]</div>
+        <div class="window-buttons">
+          <div class="window-button"></div>
+          <div class="window-button"></div>
+          <div class="window-button"></div>
+        </div>
+      </div>
+      <div class="code-content" id="code-area-2"></div>
+      <div class="toolbar">
+        <span class="toolbar-item">FILE</span>
+        <span class="toolbar-item">EDIT</span>
+        <span class="toolbar-item">VIEW</span>
+        <span class="toolbar-item">TOOLS</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="spawn-button">SPAWN NEW WINDOW</button>
+
+  <!-- RawmWare.OS Webcam Window -->
+  <div class="rawmware-window" id="webcam-window">
+    <div class="title-bar" id="title-bar">
+      <div class="title-bar-text">RawmWare.OS</div>
+      <div class="title-bar-controls">
+        <div class="title-bar-button">_</div>
+        <div class="title-bar-button">□</div>
+        <div class="title-bar-button" id="close-button">×</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="webcam-container">
+        <video id="webcam" autoplay playsinline></video>
+        <div class="webcam-code-overlay-left" id="webcam-code-overlay-left"></div>
+        <div class="webcam-code-overlay-right" id="webcam-code-overlay-right"></div>
+        <div class="subtitle-container">
+          <div class="subtitle-jp">私はここにいる、永遠にあなたと共に</div>
+          <div class="subtitle-en">I'm here, so I'll be with you forever.</div>
+        </div>
+      </div>
+      <div class="status-bar">
+        <span>Ready</span>
+        <div class="status-bar-tools">
+          <div class="retry-button" id="retry-button">Retry</div>
+        </div>
+      </div>
+      <div class="camera-selector" id="camera-selector">
+        <label class="camera-label">Select Camera:</label>
+        <select class="camera-dropdown" id="camera-dropdown"></select>
+      </div>
+    </div>
+    
+    <!-- Resize Handles -->
+    <div class="resize-handle resize-handle-n" id="resize-n"></div>
+    <div class="resize-handle resize-handle-e" id="resize-e"></div>
+    <div class="resize-handle resize-handle-s" id="resize-s"></div>
+    <div class="resize-handle resize-handle-w" id="resize-w"></div>
+    <div class="resize-handle resize-handle-ne" id="resize-ne"></div>
+    <div class="resize-handle resize-handle-se" id="resize-se"></div>
+    <div class="resize-handle resize-handle-sw" id="resize-sw"></div>
+    <div class="resize-handle resize-handle-nw" id="resize-nw"></div>
+  </div>
+
+  <script>
+    // Code snippets for animation
+    const codeSnippets1 = [
+      'class QuantumState {\n\
+  // Wave function evolution\n\
+  ψ(x, t) {\n\
+    return A * Math.exp(i * (k*x - ω*t));\n\
+  }\n\
+\n\
+  // Probability density\n\
+  ρ(x, t) {\n\
+    return |ψ(x, t)|²;\n\
+  }\n\
+\n\
+  // Momentum operator\n\
+  p̂ = -iℏ∇;\n\
+}',
+
+      'class QuantumField {\n\
+  // Field operators\n\
+  φ(x) = ∑ₖ(aₖe^(ikx) + aₖ†e^(-ikx))/√2ωₖ;\n\
+  π(x) = i∑ₖ√(ℏωₖ/2)(aₖe^(ikx) - aₖ†e^(-ikx));\n\
+\n\
+  // Commutation relations\n\
+  [φ(x), π(y)] = iℏδ(x-y);\n\
+  [aₖ, aₗ†] = δₖₗ;\n\
+}',
+
+      'class SpinSystem {\n\
+  // Pauli matrices\n\
+  σx = [[0,1], [1,0]];\n\
+  σy = [[0,-i], [i,0]];\n\
+  σz = [[1,0], [0,-1]];\n\
+\n\
+  // Spin states\n\
+  |↑⟩ = (1,0);\n\
+  |↓⟩ = (0,1);\n\
+}'
+    ];
+
+    const codeSnippets2 = [
+      'class DiracTheory {\n\
+  // Dirac matrices\n\
+  γ⁰ = [[1,0,0,0], [0,1,0,0], [0,0,-1,0], [0,0,0,-1]];\n\
+  γⁱ = [[0,σⁱ], [-σⁱ,0]];\n\
+\n\
+  // Dirac equation\n\
+  (iγᵘ∂ᵘ - m)ψ = 0;\n\
+}',
+
+      'class GaugeTheory {\n\
+  // Covariant derivative\n\
+  Dᵘ = ∂ᵘ + igAᵘ;\n\
+\n\
+  // Field strength\n\
+  Fᵘᵛ = ∂ᵘAᵛ - ∂ᵛAᵘ + ig[Aᵘ,Aᵛ];\n\
+\n\
+  // Yang-Mills action\n\
+  S = -1/4 ∫d⁴x tr(FᵘᵛFᵘᵛ);\n\
+}',
+
+      'class StatMech {\n\
+  // Partition function\n\
+  Z = tr(e^(-βH));\n\
+\n\
+  // Free energy\n\
+  F = -1/β * ln(Z);\n\
+\n\
+  // Entropy\n\
+  S = -k∑ᵢpᵢln(pᵢ);\n\
+}'
+    ];
+
+    // ---------------------------------------------
+    // Background Animation Code
+    // ---------------------------------------------
+    let windowCounter = 2; // Start from 2 since we have two initial windows
+    const codeWindows = new Map(); // Store window data
+
+    // Initialize the code windows system
+    function initializeCodeWindows() {
+      const container = document.querySelector('.code-window-container');
+      const spawnButton = document.querySelector('.spawn-button');
+      
+      // Make container clickable
+      container.style.pointerEvents = 'auto';
+      
+      // Initialize existing windows
+      document.querySelectorAll('.code-window').forEach((window, index) => {
+        const id = index + 1;
+        codeWindows.set(id, {
+          element: window,
+          codeArea: window.querySelector('.code-content'),
+          snippetIndex: index,
+          charIndex: 0,
+          text: '',
+          isDeleting: false,
+          typingSpeed: 1
+        });
+        
+        makeWindowDraggable(window);
+        initializeWindowBehavior(window);
+      });
+      
+      // Spawn button click handler
+      spawnButton.addEventListener('click', () => {
+        createNewWindow();
+      });
+    }
+
+    function createNewWindow() {
+      windowCounter++;
+      const id = windowCounter;
+      
+      // Create window element
+      const window = document.createElement('div');
+      window.className = 'code-window';
+      window.style.left = `${Math.random() * 60 + 20}vw`;
+      window.style.top = `${Math.random() * 60 + 10}vh`;
+      
+      // Add window content
+      window.innerHTML = `
+        <div class="window-header">
+          <div class="window-title">RawmWare.OS - [ScriptLog ${id}]</div>
+          <div class="window-buttons">
+            <div class="window-button"></div>
+            <div class="window-button"></div>
+            <div class="window-button"></div>
+          </div>
+        </div>
+        <div class="code-content" id="code-area-${id}"></div>
+        <div class="toolbar">
+          <span class="toolbar-item">FILE</span>
+          <span class="toolbar-item">EDIT</span>
+          <span class="toolbar-item">VIEW</span>
+          <span class="toolbar-item">TOOLS</span>
+        </div>
+      `;
+      
+      // Add to container
+      document.querySelector('.code-window-container').appendChild(window);
+      
+      // Initialize window behavior
+      makeWindowDraggable(window);
+      initializeWindowBehavior(window);
+      
+      // Setup code animation
+      const codeArea = window.querySelector('.code-content');
+      codeWindows.set(id, {
+        element: window,
+        codeArea: codeArea,
+        snippetIndex: Math.floor(Math.random() * codeSnippets1.length),
+        charIndex: 0,
+        text: '',
+        isDeleting: false,
+        typingSpeed: 1
+      });
+      
+      // Start animation for this window
+      animateWindow(id);
+    }
+
+    function makeWindowDraggable(window) {
+      let isDragging = false;
+      let currentX;
+      let currentY;
+      let initialX;
+      let initialY;
+      
+      window.addEventListener('mousedown', dragStart);
+      document.addEventListener('mousemove', drag);
+      document.addEventListener('mouseup', dragEnd);
+      
+      function dragStart(e) {
+        if (e.target.classList.contains('window-button')) return;
+        
+        initialX = e.clientX - window.offsetLeft;
+        initialY = e.clientY - window.offsetTop;
+        
+        if (e.target === window || e.target.closest('.window-header')) {
+          isDragging = true;
+          window.classList.add('active');
+          bringToFront(window);
+        }
+      }
+      
+      function drag(e) {
+        if (isDragging) {
+          e.preventDefault();
+          
+          currentX = e.clientX - initialX;
+          currentY = e.clientY - initialY;
+          
+          // Constrain to viewport
+          currentX = Math.max(0, Math.min(currentX, window.parentElement.clientWidth - window.offsetWidth));
+          currentY = Math.max(0, Math.min(currentY, window.parentElement.clientHeight - window.offsetHeight));
+          
+          window.style.left = `${currentX}px`;
+          window.style.top = `${currentY}px`;
+        }
+      }
+      
+      function dragEnd() {
+        isDragging = false;
+      }
+    }
+
+    function initializeWindowBehavior(window) {
+      // Close button
+      const closeButton = window.querySelector('.window-button:last-child');
+      closeButton.addEventListener('click', () => {
+        window.remove();
+        codeWindows.delete(window.dataset.id);
+      });
+      
+      // Window focus
+      window.addEventListener('mousedown', () => {
+        bringToFront(window);
+      });
+    }
+
+    function bringToFront(window) {
+      const windows = document.querySelectorAll('.code-window');
+      windows.forEach(w => {
+        w.classList.remove('active');
+        w.style.zIndex = '5';
+      });
+      window.classList.add('active');
+      window.style.zIndex = '10';
+    }
+
+    function animateWindow(id) {
+      const windowData = codeWindows.get(id);
+      if (!windowData) return;
+      
+      const snippets = id % 2 === 0 ? codeSnippets1 : codeSnippets2;
+      const currentSnippet = snippets[windowData.snippetIndex];
+      
+      if (windowData.isDeleting) {
+        windowData.text = windowData.text.substring(0, windowData.text.length - 7);
+        windowData.typingSpeed = 0.5;
+        
+        if (windowData.text === '') {
+          windowData.isDeleting = false;
+          windowData.snippetIndex = (windowData.snippetIndex + 1) % snippets.length;
+          windowData.charIndex = 0;
+          windowData.typingSpeed = 1;
+        }
+      } else {
+        windowData.text = currentSnippet.substring(0, windowData.charIndex + 1);
+        windowData.charIndex++;
+        
+        windowData.typingSpeed = Math.random() * 3 + 1;
+        
+        if (windowData.charIndex === currentSnippet.length) {
+          windowData.isDeleting = true;
+          windowData.typingSpeed = 200;
+          windowData.charIndex = 0;
+        }
+      }
+      
+      windowData.codeArea.innerHTML = windowData.text + '<span class="cursor"></span>';
+      windowData.codeArea.scrollTop = windowData.codeArea.scrollHeight;
+      
+      setTimeout(() => animateWindow(id), windowData.typingSpeed);
+    }
+
+    // Start the typing animations with the new system
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeCodeWindows();
+      // Start animation for initial windows
+      animateWindow(1);
+      animateWindow(2);
+    });
+
+    // ---------------------------------------------
+    // RawmWare.OS Webcam Functionality
+    // ---------------------------------------------
+    
+    const webcamWindow = document.getElementById('webcam-window');
+    const titleBar = document.getElementById('title-bar');
+    
+    // Window management variables
+    let isDragging = false;
+    let isResizing = false;
+    let initialX, initialY, initialMouseX, initialMouseY, initialWidth, initialHeight;
+    
+    // Make the entire window draggable
+    webcamWindow.addEventListener('mousedown', function(e) {
+      // Don't start drag if clicking on buttons or resize handles
+      if (e.target.id === 'close-button' || 
+          e.target.classList.contains('resize-handle')) {
+        return;
+      }
+      
+      e.preventDefault();
+      isDragging = true;
+      
+      const rect = webcamWindow.getBoundingClientRect();
+      
+      // Calculate the offset of the mouse click relative to the window position
+      initialX = e.clientX - rect.left;
+      initialY = e.clientY - rect.top;
+      
+      // Add dragging class for visual feedback
+      webcamWindow.classList.add('dragging');
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (isDragging) {
+        e.preventDefault();
+        
+        // Calculate new position based on mouse position minus initial click offset
+        const newLeft = e.clientX - initialX;
+        const newTop = e.clientY - initialY;
+        
+        webcamWindow.style.left = newLeft + 'px';
+        webcamWindow.style.top = newTop + 'px';
+      }
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (isDragging) {
+        isDragging = false;
+        webcamWindow.classList.remove('dragging');
+      }
+    });
+
+    // Resize functionality - just corners
+    const corners = ['ne', 'se', 'sw', 'nw'];
+    corners.forEach(corner => {
+      const handle = document.getElementById(`resize-${corner}`);
+      handle.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        isResizing = true;
+        const rect = webcamWindow.getBoundingClientRect();
+        
+        initialMouseX = e.clientX;
+        initialMouseY = e.clientY;
+        initialWidth = rect.width;
+        initialHeight = rect.height;
+        initialX = rect.left;
+        initialY = rect.top;
+        
+        webcamWindow.classList.add('resizing');
+        
+        const resizeHandler = function(e) {
+          if (!isResizing) return;
+          
+          e.preventDefault();
+          const dx = e.clientX - initialMouseX;
+          const dy = e.clientY - initialMouseY;
+          
+          let newWidth = initialWidth;
+          let newHeight = initialHeight;
+          let newLeft = initialX;
+          let newTop = initialY;
+          
+          // Minimum size
+          const minWidth = 320;
+          const minHeight = 240;
+          
+          if (corner.includes('e')) { // East
+            newWidth = Math.max(minWidth, initialWidth + dx);
+          }
+          if (corner.includes('w')) { // West
+            newWidth = Math.max(minWidth, initialWidth - dx);
+            newLeft = initialX + initialWidth - newWidth;
+          }
+          if (corner.includes('s')) { // South
+            newHeight = Math.max(minHeight, initialHeight + dy);
+          }
+          if (corner.includes('n')) { // North
+            newHeight = Math.max(minHeight, initialHeight - dy);
+            newTop = initialY + initialHeight - newHeight;
+          }
+          
+          webcamWindow.style.width = newWidth + 'px';
+          webcamWindow.style.height = newHeight + 'px';
+          webcamWindow.style.left = newLeft + 'px';
+          webcamWindow.style.top = newTop + 'px';
+        };
+        
+        const cleanup = function() {
+          isResizing = false;
+          webcamWindow.classList.remove('resizing');
+          document.removeEventListener('mousemove', resizeHandler);
+          document.removeEventListener('mouseup', cleanup);
+        };
+        
+        document.addEventListener('mousemove', resizeHandler);
+        document.addEventListener('mouseup', cleanup);
+      });
+    });
+
+    // Remove transform to prevent dragging issues
+    webcamWindow.style.transform = 'none';
+    webcamWindow.style.left = '50%';
+    webcamWindow.style.top = '50%';
+    
+    // Access webcam
+    async function setupWebcam(attemptNumber = 1, deviceId = null) {
+      // Fix for accidentally passing an Event object
+      if (attemptNumber && typeof attemptNumber === 'object' && attemptNumber.type) {
+        console.warn('Event object incorrectly passed to setupWebcam. Using default attemptNumber=1');
+        attemptNumber = 1;
+      }
+      
+      const statusBar = document.querySelector('.status-bar span');
+      const retryButton = document.getElementById('retry-button');
+      const cameraSelector = document.getElementById('camera-selector');
+      const video = document.getElementById('webcam');
+      
+      // Hide controls when starting
+      retryButton.style.display = 'none';
+      cameraSelector.style.display = 'none';
+      
+      try {
+        statusBar.textContent = 'Requesting webcam access...';
+        
+        // Only list camera devices once at the beginning, not every time
+        if (attemptNumber === 1 && !deviceId) {
+          await listCameraDevices();
+        }
+        
+        let constraints;
+        
+        // If a specific deviceId is provided, use it
+        if (deviceId) {
+          constraints = {
+            video: { deviceId: { exact: deviceId } },
+            audio: false
+          };
+        }
+        // Otherwise try different constraints based on attempt number
+        else if (attemptNumber === 1) {
+          // First attempt - use ideal constraints
+          constraints = { 
+            video: {
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+              facingMode: "user"
+            },
+            audio: false
+          };
+        } else if (attemptNumber === 2) {
+          // Second attempt - use simplified constraints
+          constraints = { 
+            video: true,
+            audio: false
+          };
+        } else {
+          // Third attempt - try with specific frame rate and lowest resolution
+          constraints = { 
+            video: {
+              width: { exact: 320 },
+              height: { exact: 240 },
+              frameRate: { max: 15 }
+            },
+            audio: false
+          };
+        }
+        
+        console.log(`Attempt ${attemptNumber} with constraints:`, constraints);
+        
+        // If we had a previous stream, stop all tracks before getting a new one
+        if (video.srcObject) {
+          const tracks = video.srcObject.getTracks();
+          tracks.forEach(track => {
+            track.stop();
+            console.log('Stopped track:', track.kind, track.label);
+          });
+          video.srcObject = null;
+          
+          // Add a small delay to make sure resources are freed
+          await delay(300);
+        }
+        
+        // Attempt to get webcam access with current constraints
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        // Assign the stream to the video element
+        video.srcObject = stream;
+        console.log('Stream assigned with tracks:', stream.getTracks().length);
+        
+        // Update status when video is ready
+        video.onloadedmetadata = function() {
+          statusBar.textContent = 'Webcam active - ' + video.videoWidth + 'x' + video.videoHeight;
+        };
+        
+        // Handle potential play errors
+        video.onplay = function() {
+          // Simple status update
+          statusBar.textContent = 'Webcam streaming';
+        };
+        
+        video.onerror = function() {
+          statusBar.textContent = 'Error: Video playback issue';
+          console.error('Video element error:', video.error);
+          showRetryButton();
+        };
+        
+      } catch (error) {
+        console.error(`Error accessing webcam (attempt ${attemptNumber}):`, error);
+        
+        // Try next fallback if we have NotReadableError and haven't exhausted all attempts
+        if (error.name === 'NotReadableError' && attemptNumber < 3 && !deviceId) {
+          statusBar.textContent = `Webcam busy, trying alternative method (${attemptNumber+1}/3)...`;
+          // Add a longer delay before next attempt
+          setTimeout(() => setupWebcam(attemptNumber + 1), 1500);
+          return;
+        }
+        
+        // Provide more specific error messages
+        if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+          statusBar.textContent = 'Error: No webcam found on this device';
+        } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          statusBar.textContent = 'Error: Webcam permission denied';
+        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+          statusBar.textContent = 'Error: Webcam already in use or hardware issue';
+          showCameraSelector(); // Show device selector on this specific error
+        } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+          statusBar.textContent = 'Error: Webcam cannot satisfy constraints';
+        } else if (error.name === 'TypeError') {
+          statusBar.textContent = 'Error: HTTPS required for webcam access';
+        } else {
+          statusBar.textContent = 'Error: ' + error.message;
+        }
+        
+        // Show retry button after errors
+        showRetryButton();
+      }
+    }
+    
+    async function listCameraDevices() {
+      try {
+        let devices;
+        try {
+          // First try to get devices without requesting permission
+          devices = await navigator.mediaDevices.enumerateDevices();
+          
+          // If we have labels already, we don't need to request permission again
+          const hasLabels = devices.some(device => 
+            device.kind === 'videoinput' && device.label !== '');
+          
+          if (!hasLabels) {
+            // We need permission to see labels - request temporarily
+            const tempStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+            // Get devices again, now with labels
+            devices = await navigator.mediaDevices.enumerateDevices();
+            // Stop the temporary stream
+            tempStream.getTracks().forEach(track => track.stop());
+          }
+        } catch (e) {
+          console.log("Could not enumerate devices:", e);
+          return false;
+        }
+        
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        const dropdown = document.getElementById('camera-dropdown');
+        
+        // Clear existing options
+        dropdown.innerHTML = '';
+        
+        // Add options for each video device
+        if (videoDevices.length > 1) {
+          videoDevices.forEach((device, index) => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.text = device.label || `Camera ${index + 1}`;
+            dropdown.appendChild(option);
+          });
+          
+          // Show the camera selector if multiple cameras
+          showCameraSelector();
+          return true;
+        } else if (videoDevices.length === 1) {
+          const option = document.createElement('option');
+          option.value = videoDevices[0].deviceId;
+          option.text = videoDevices[0].label || 'Default Camera';
+          dropdown.appendChild(option);
+        } else {
+          const option = document.createElement('option');
+          option.value = '';
+          option.text = 'No cameras found';
+          dropdown.appendChild(option);
+        }
+        
+        return false;
+      } catch (error) {
+        console.error('Error listing camera devices:', error);
+        return false;
+      }
+    }
+    
+    function showRetryButton() {
+      const retryButton = document.getElementById('retry-button');
+      retryButton.style.display = 'flex';
+    }
+    
+    function showCameraSelector() {
+      const cameraSelector = document.getElementById('camera-selector');
+      cameraSelector.style.display = 'block';
+    }
+    
+    // Close button functionality
+    function initCloseButton() {
+      document.getElementById('close-button').addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        if (confirm('Close RawmWare.OS Webcam Viewer?')) {
+          webcamWindow.style.display = 'none';
+        }
+      });
+    }
+
+    // Event handling for buttons and initialization
+    function initializeEventListeners() {
+      // Set initial window position (centered)
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      webcamWindow.style.left = '50%';
+      webcamWindow.style.top = '50%';
+      webcamWindow.style.transform = 'translate(-50%, -50%)';
+      
+      // Initialize window management
+      initCloseButton();
+      
+      // Initialize webcam
+      setupWebcam(1);
+      
+      // Add event listener for retry button
+      document.getElementById('retry-button').addEventListener('click', function(e) {
+        e.preventDefault(); // Prevent event from propagating
+        setupWebcam(1); // Start from first attempt again
+      });
+      
+      // Add event listener for camera dropdown
+      document.getElementById('camera-dropdown').addEventListener('change', function(e) {
+        const selectedDeviceId = this.value;
+        if (selectedDeviceId) {
+          setupWebcam(1, selectedDeviceId);
+        }
+      });
+    }
+    
+    // Wait for page to fully load, then initialize
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeEventListeners);
+    } else {
+      initializeEventListeners();
+    }
+
+    // ---------------------------------------------
+    // Webcam Code Overlay Animation
+    // ---------------------------------------------
+    const webcamCodeOverlayLeft = document.getElementById('webcam-code-overlay-left');
+    const webcamCodeOverlayRight = document.getElementById('webcam-code-overlay-right');
+    
+    // Variables for webcam code animation
+    let currentWebcamLeftIndex = 0;
+    let currentWebcamRightIndex = 0;
+    let currentWebcamLeftCharIndex = 0;
+    let currentWebcamRightCharIndex = 0;
+    let currentWebcamLeftText = '';
+    let currentWebcamRightText = '';
+    let isWebcamLeftDeleting = false;
+    let isWebcamRightDeleting = false;
+    let typingSpeedWebcam = 1;
+
+    function typeWebcamCode() {
+      // Handle left side
+      const currentLeftSnippet = codeSnippets1[currentWebcamLeftIndex];
+      if (isWebcamLeftDeleting) {
+        currentWebcamLeftText = currentWebcamLeftText.substring(0, currentWebcamLeftText.length - 5);
+        if (currentWebcamLeftText === '') {
+          isWebcamLeftDeleting = false;
+          currentWebcamLeftIndex = (currentWebcamLeftIndex + 1) % codeSnippets1.length;
+          currentWebcamLeftCharIndex = 0;
+        }
+      } else {
+        currentWebcamLeftText = currentLeftSnippet.substring(0, currentWebcamLeftCharIndex + 1);
+        currentWebcamLeftCharIndex++;
+        if (currentWebcamLeftCharIndex === currentLeftSnippet.length) {
+          isWebcamLeftDeleting = true;
+          setTimeout(() => {}, 2000);
+        }
+      }
+
+      // Handle right side
+      const currentRightSnippet = codeSnippets2[currentWebcamRightIndex];
+      if (isWebcamRightDeleting) {
+        currentWebcamRightText = currentWebcamRightText.substring(0, currentWebcamRightText.length - 5);
+        if (currentWebcamRightText === '') {
+          isWebcamRightDeleting = false;
+          currentWebcamRightIndex = (currentWebcamRightIndex + 1) % codeSnippets2.length;
+          currentWebcamRightCharIndex = 0;
+        }
+      } else {
+        currentWebcamRightText = currentRightSnippet.substring(0, currentWebcamRightCharIndex + 1);
+        currentWebcamRightCharIndex++;
+        if (currentWebcamRightCharIndex === currentRightSnippet.length) {
+          isWebcamRightDeleting = true;
+          setTimeout(() => {}, 2000);
+        }
+      }
+
+      // Update the displays with cursors
+      webcamCodeOverlayLeft.innerHTML = currentWebcamLeftText + '<span class="cursor"></span>';
+      webcamCodeOverlayRight.innerHTML = currentWebcamRightText + '<span class="cursor"></span>';
+
+      // Continue the animation
+      setTimeout(typeWebcamCode, Math.random() * 2 + 1);
+    }
+    
+    // Start the webcam code overlay animation after a small delay
+    setTimeout(() => {
+      typeWebcamCode();
+    }, 1000);
+  </script>
+</body>
+</html> 

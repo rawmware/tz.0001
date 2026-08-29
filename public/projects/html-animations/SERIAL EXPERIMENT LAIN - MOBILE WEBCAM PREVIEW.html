@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RawmWare.OS Mobile</title>
+  <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap" rel="stylesheet">
+  <style>
+    /* Reset and Base Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000000;
+      color: #FFFFFF;
+      font-family: 'Times New Roman', serif;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      position: fixed;
+    }
+
+    /* Mobile-optimized Code Windows */
+    .code-window {
+      position: absolute;
+      width: 100%;
+      height: 30vh;
+      background-color: rgba(0, 0, 0, 0.95);
+      border: 2px solid #FFFFFF;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      z-index: 5;
+    }
+    
+    .window-top {
+      top: 0;
+    }
+    
+    .window-bottom {
+      bottom: 0;
+    }
+
+    .window-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background-color: #000000;
+      border-bottom: 2px solid #FFFFFF;
+      height: 40px;
+    }
+
+    .window-title {
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-size: 14px;
+      font-weight: bold;
+      color: #FFFFFF;
+    }
+
+    .window-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .window-button {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1px solid #FFFFFF;
+    }
+
+    .code-content {
+      flex: 1;
+      overflow: hidden;
+      white-space: pre;
+      font-family: 'Courier New', monospace;
+      color: #FFFFFF;
+      font-weight: 600;
+      font-size: 12px;
+      line-height: 1.4;
+      padding: 8px;
+      background-color: #000000;
+    }
+
+    /* Mobile-optimized Webcam Window */
+    .rawmware-window {
+      position: fixed;
+      top: 30vh;
+      left: 0;
+      width: 100%;
+      height: 40vh;
+      background-color: #000000;
+      z-index: 100;
+    }
+    
+    .title-bar {
+      background: linear-gradient(90deg, #b2a1bd, #635456);
+      color: white;
+      padding: 8px 12px;
+      font-weight: bold;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 40px;
+      user-select: none;
+      touch-action: none;
+    }
+    
+    .title-bar-text {
+      margin-left: 4px;
+    }
+    
+    .title-bar-controls {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .title-bar-button {
+      width: 20px;
+      height: 20px;
+      background-color: #c0c0c0;
+      border: 1px solid #ffffff;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 14px;
+    }
+    
+    .webcam-container {
+      width: 100%;
+      height: calc(100% - 40px);
+      position: relative;
+      background-color: #000000;
+      overflow: hidden;
+    }
+    
+    #webcam {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    /* Code overlays */
+    .webcam-code-overlay-left,
+    .webcam-code-overlay-right {
+      position: absolute;
+      top: 0;
+      width: 50%;
+      height: 100%;
+      z-index: 20;
+      pointer-events: none;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
+      color: rgba(119, 0, 255, 0.6);
+      font-size: 10px;
+      line-height: 1.2;
+      white-space: pre;
+      text-shadow: 0 0 10px rgb(1, 121, 221);
+      mix-blend-mode: screen;
+      padding: 5px;
+    }
+
+    .webcam-code-overlay-left {
+      left: 0;
+      text-align: left;
+    }
+
+    .webcam-code-overlay-right {
+      right: 0;
+      text-align: right;
+    }
+
+    /* Subtitle styles */
+    .subtitle-container {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      z-index: 30;
+      pointer-events: none;
+    }
+
+    .subtitle-jp {
+      color: #ff0000;
+      font-size: 14px;
+      font-family: "MS Gothic", "Yu Gothic", sans-serif;
+      margin-bottom: 4px;
+      opacity: 0.9;
+      text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.8);
+    }
+
+    .subtitle-en {
+      color: #ff0000;
+      font-size: 16px;
+      font-family: "Arial", sans-serif;
+      opacity: 0.9;
+      text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.8);
+    }
+
+    /* Status bar */
+    .status-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 30px;
+      background-color: #000000;
+      border-top: 1px solid #FFFFFF;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      font-size: 12px;
+      justify-content: space-between;
+    }
+
+    /* Camera selector */
+    .camera-selector {
+      display: none;
+      position: absolute;
+      bottom: 30px;
+      left: 0;
+      right: 0;
+      background-color: #000000;
+      border-top: 1px solid #FFFFFF;
+      padding: 8px;
+    }
+
+    .camera-dropdown {
+      width: 100%;
+      padding: 8px;
+      background-color: #000000;
+      color: #FFFFFF;
+      border: 1px solid #FFFFFF;
+      font-size: 14px;
+    }
+
+    /* Retry button */
+    .retry-button {
+      display: none;
+      padding: 8px 16px;
+      background-color: #000000;
+      color: #FFFFFF;
+      border: 1px solid #FFFFFF;
+      font-size: 14px;
+    }
+
+    /* Cursor animation */
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 14px;
+      background-color: #FFFFFF;
+      animation: blink 0.8s infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* iOS-specific fixes */
+    @supports (-webkit-touch-callout: none) {
+      body {
+        height: -webkit-fill-available;
+      }
+      
+      .rawmware-window {
+        height: 40vh;
+        height: calc(40 * var(--vh, 1vh));
+      }
+      
+      .code-window {
+        height: 30vh;
+        height: calc(30 * var(--vh, 1vh));
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Code Window -->
+  <div class="code-window window-top">
+    <div class="window-header">
+      <div class="window-title">RawmWare.OS - [ScriptLog]</div>
+      <div class="window-buttons">
+        <div class="window-button"></div>
+        <div class="window-button"></div>
+        <div class="window-button"></div>
+      </div>
+    </div>
+    <div class="code-content" id="code-area-1"></div>
+  </div>
+
+  <!-- Webcam Window -->
+  <div class="rawmware-window" id="webcam-window">
+    <div class="title-bar">
+      <div class="title-bar-text">RawmWare.OS Mobile</div>
+      <div class="title-bar-controls">
+        <div class="title-bar-button" id="camera-switch">⟲</div>
+        <div class="title-bar-button" id="close-button">×</div>
+      </div>
+    </div>
+    <div class="webcam-container">
+      <video id="webcam" autoplay playsinline></video>
+      <div class="webcam-code-overlay-left" id="webcam-code-overlay-left"></div>
+      <div class="webcam-code-overlay-right" id="webcam-code-overlay-right"></div>
+      <div class="subtitle-container">
+        <div class="subtitle-jp">私はここにいる、永遠にあなたと共に</div>
+        <div class="subtitle-en">I'm here, so I'll be with you forever.</div>
+      </div>
+      <div class="status-bar">
+        <span>Ready</span>
+        <div class="status-bar-tools">
+          <button class="retry-button" id="retry-button">Retry</button>
+        </div>
+      </div>
+      <div class="camera-selector" id="camera-selector">
+        <select class="camera-dropdown" id="camera-dropdown"></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Code Window -->
+  <div class="code-window window-bottom">
+    <div class="window-header">
+      <div class="window-title">RawmWare.OS - [ScriptLog]</div>
+      <div class="window-buttons">
+        <div class="window-button"></div>
+        <div class="window-button"></div>
+        <div class="window-button"></div>
+      </div>
+    </div>
+    <div class="code-content" id="code-area-2"></div>
+  </div>
+
+  <script>
+    // Fix for iOS vh units
+    function setVHUnit() {
+      let vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+    
+    window.addEventListener('resize', setVHUnit);
+    setVHUnit();
+
+    // Code animation snippets (reusing the same code snippets from the desktop version)
+    const codeSnippets1 = [
+      '/**\n\
+* QuantumState\n\
+*/\n\
+\n\
+class Quantum {\n\
+  constructor() {\n\
+    this.ψ = [];\n\
+    this.ℏ = 1.054571817e-34;\n\
+  }\n\
+\n\
+  evolve(t) {\n\
+    return Math.exp(-1i * this.H * t / this.ℏ);\n\
+  }\n\
+}',
+      '/**\n\
+* Neural\n\
+*/\n\
+\n\
+class Brain {\n\
+  sync() {\n\
+    this.waves = [];\n\
+    this.freq = 40;\n\
+    return this.resonate();\n\
+  }\n\
+}'
+    ];
+
+    const codeSnippets2 = [
+      '/**\n\
+* Photonic\n\
+*/\n\
+\n\
+class Light {\n\
+  constructor() {\n\
+    this.c = 299792458;\n\
+    this.λ = 550e-9;\n\
+  }\n\
+\n\
+  propagate(d) {\n\
+    return d / this.c;\n\
+  }\n\
+}',
+      '/**\n\
+* Defense\n\
+*/\n\
+\n\
+class Shield {\n\
+  protect() {\n\
+    this.field = true;\n\
+    this.strength = 100;\n\
+    return this.activate();\n\
+  }\n\
+}'
+    ];
+
+    // Animation functions
+    function typeCode(element, snippets, index = 0, charIndex = 0) {
+      const snippet = snippets[index];
+      const text = snippet.substring(0, charIndex + 1);
+      element.innerHTML = text + '<span class="cursor"></span>';
+
+      if (charIndex < snippet.length - 1) {
+        setTimeout(() => typeCode(element, snippets, index, charIndex + 1), 
+          Math.random() * 50 + 20);
+      } else {
+        setTimeout(() => {
+          deleteCode(element, snippets, index, text.length);
+        }, 2000);
+      }
+    }
+
+    function deleteCode(element, snippets, index, length) {
+      const text = snippets[index].substring(0, length - 1);
+      element.innerHTML = text + '<span class="cursor"></span>';
+
+      if (length > 0) {
+        setTimeout(() => deleteCode(element, snippets, index, length - 1), 
+          Math.random() * 30 + 10);
+      } else {
+        setTimeout(() => {
+          typeCode(element, snippets, (index + 1) % snippets.length);
+        }, 500);
+      }
+    }
+
+    // Start animations
+    const codeArea1 = document.getElementById('code-area-1');
+    const codeArea2 = document.getElementById('code-area-2');
+    typeCode(codeArea1, codeSnippets1);
+    setTimeout(() => typeCode(codeArea2, codeSnippets2), 1000);
+
+    // Webcam functionality
+    async function setupWebcam(deviceId = null) {
+      const video = document.getElementById('webcam');
+      const statusBar = document.querySelector('.status-bar span');
+      const retryButton = document.getElementById('retry-button');
+      const cameraSelector = document.getElementById('camera-selector');
+
+      try {
+        // Hide controls
+        retryButton.style.display = 'none';
+        cameraSelector.style.display = 'none';
+
+        // Set up constraints
+        let constraints = {
+          video: {
+            facingMode: deviceId ? undefined : "user",
+            deviceId: deviceId ? { exact: deviceId } : undefined
+          },
+          audio: false
+        };
+
+        // Stop any existing stream
+        if (video.srcObject) {
+          video.srcObject.getTracks().forEach(track => track.stop());
+        }
+
+        // Get new stream
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+        statusBar.textContent = 'Camera active';
+
+        // List available cameras
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        
+        if (videoDevices.length > 1) {
+          const dropdown = document.getElementById('camera-dropdown');
+          dropdown.innerHTML = '';
+          videoDevices.forEach(device => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.text = device.label || `Camera ${videoDevices.indexOf(device) + 1}`;
+            dropdown.appendChild(option);
+          });
+          cameraSelector.style.display = 'block';
+        }
+
+      } catch (error) {
+        console.error('Camera error:', error);
+        statusBar.textContent = `Error: ${error.message}`;
+        retryButton.style.display = 'block';
+      }
+    }
+
+    // Event listeners
+    document.getElementById('retry-button').addEventListener('click', () => setupWebcam());
+    document.getElementById('camera-switch').addEventListener('click', async () => {
+      const dropdown = document.getElementById('camera-dropdown');
+      const currentIndex = dropdown.selectedIndex;
+      const nextIndex = (currentIndex + 1) % dropdown.options.length;
+      dropdown.selectedIndex = nextIndex;
+      await setupWebcam(dropdown.value);
+    });
+    document.getElementById('camera-dropdown').addEventListener('change', function() {
+      setupWebcam(this.value);
+    });
+    document.getElementById('close-button').addEventListener('click', () => {
+      if (confirm('Close RawmWare.OS Mobile?')) {
+        const video = document.getElementById('webcam');
+        if (video.srcObject) {
+          video.srcObject.getTracks().forEach(track => track.stop());
+        }
+        window.close();
+      }
+    });
+
+    // Initialize webcam on page load
+    document.addEventListener('DOMContentLoaded', () => setupWebcam());
+  </script>
+</body>
+</html> 

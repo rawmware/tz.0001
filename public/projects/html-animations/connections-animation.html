@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>RawmWare.Com - Data Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+
+        .code-window {
+            width: 1200px;
+            height: 900px;
+            background-color: #000000;
+            border: 6px solid #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            pointer-events: none;
+            position: relative;
+            max-width: 95vw;
+            max-height: 95vh;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+
+        .window-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background-color: #000000;
+            border-bottom: 3px solid #FFFFFF;
+            min-height: 50px;
+        }
+
+
+        .window-title {
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #FFFFFF;
+            font-family: 'Times New Roman', serif;
+        }
+
+
+        .canvas-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+            background-color: #000000;
+            border-top: 1px solid #FFFFFF;
+            border-bottom: 1px solid #FFFFFF;
+            padding: 15px;
+            min-height: 0;
+            position: relative;
+            align-items: center;
+        }
+
+
+        .canvas-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+
+        #tracking-canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+
+        .coordinate-display {
+            font-family: monospace;
+            color: #FFFFFF;
+            font-size: 14px;
+            line-height: 1.6;
+            height: fit-content;
+            align-self: center;
+        }
+
+
+        @media (max-width: 768px) {
+            .code-window {
+                width: 95vw;
+                height: 95vw;
+                max-height: 95vh;
+            }
+           
+            .window-title {
+                font-size: 0.8em;
+            }
+           
+            .canvas-container {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+           
+            .coordinate-display {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="code-window">
+        <div class="window-header">
+            <div class="window-title">RawmWare.Com - Data Tracker v3.7</div>
+        </div>
+        <div class="canvas-container">
+            <div class="coordinate-display" id="coordinate-display"></div>
+            <div class="canvas-wrapper">
+                <canvas id="tracking-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        function setup3DTracking() {
+            const canvas = document.getElementById('tracking-canvas');
+            const ctx = canvas.getContext('2d');
+            const coordDisplay = document.getElementById('coordinate-display');
+
+
+            // 3D tracking points system
+            let trackingPoints = [];
+            let pointIdCounter = 0;
+            let time = 0;
+            let frameCount = 0;
+            let lastSpawnTime = Date.now();
+            let rotationAngle = 0;
+           
+            function generateRandom3DPoint() {
+                const pointTypes = ['iD:', 'TGT:', 'OBJ:', 'NOD:', 'TRK:'];
+                const type = pointTypes[Math.floor(Math.random() * pointTypes.length)];
+               
+                return {
+                    x: Math.random() * 0.8 + 0.1,
+                    y: Math.random() * 0.8 + 0.1,
+                    z: Math.random() * 0.8 + 0.1,
+                    label: type,
+                    id: pointIdCounter++,
+                    birthTime: Date.now(),
+                    lifespan: Math.random() * 2000 + 1000, // Longer lifespan
+                    size: Math.random() * 5 + 2,
+                    velocity: {
+                        x: (Math.random() - 0.5) * 0.003,
+                        y: (Math.random() - 0.5) * 0.003,
+                        z: (Math.random() - 0.5) * 0.003
+                    },
+                    trackingType: type,
+                    pulseSpeed: Math.random() * 0.002 + 0.002,
+                    scanDirection: Math.random() > 0.5 ? 1 : -1
+                };
+            }
+
+
+            // Start with initial points
+            for (let i = 0; i < 8; i++) {
+                trackingPoints.push(generateRandom3DPoint());
+            }
+
+
+            function resizeCanvas() {
+                const wrapper = document.querySelector('.canvas-wrapper');
+                const wrapperRect = wrapper.getBoundingClientRect();
+                const size = Math.min(wrapperRect.width * 0.95, wrapperRect.height * 0.95);
+                canvas.width = size;
+                canvas.height = size;
+            }
+
+
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+
+            function generateCoordinate(base, variance, time) {
+                const noise = Math.sin(time * 0.001 + base * 100) * variance;
+                const coord = base + noise;
+                return coord.toFixed(6);
+            }
+
+
+            function updateCoordinateDisplay() {
+                const lines = [];
+                lines.push('3D TRACKING DATA STREAM');
+                lines.push('======================');
+                lines.push(`FRAME: ${frameCount.toString().padStart(6, '0')}`);
+                lines.push(`TIME: ${(time * 0.001).toFixed(3)}s`);
+                lines.push(`ACTIVE NODES: ${trackingPoints.length}`);
+                lines.push('');
+               
+                trackingPoints.slice(0, 6).forEach((point, i) => {
+                    const x = generateCoordinate(point.x, 0.002, time + point.id * 100);
+                    const y = generateCoordinate(point.y, 0.002, time + point.id * 150);
+                    const z = generateCoordinate(point.z, 0.002, time + point.id * 200);
+                    const idNumber = Math.floor(Math.abs(Math.sin(time * 0.002 + point.id * 2.5)) * 9999);
+                    lines.push(`${point.label}_${idNumber}:`);
+                    lines.push(`  X: ${x}  Y: ${y}`);
+                    lines.push(`  Z: ${z}`);
+                });
+               
+                lines.push('');
+                lines.push('STATUS: TRACKING 3D SPACE');
+               
+                coordDisplay.innerHTML = lines.join('<br>');
+            }
+
+
+            function project3DTo2D(point3D) {
+                const focalLength = 400;
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+               
+                const cosR = Math.cos(rotationAngle);
+                const sinR = Math.sin(rotationAngle);
+               
+                const x = point3D.x - 0.5;
+                const z = point3D.z - 0.5;
+                const rotatedX = x * cosR - z * sinR;
+                const rotatedZ = x * sinR + z * cosR;
+               
+                const scale = focalLength / (focalLength + rotatedZ * 200);
+                const projectedX = centerX + rotatedX * canvas.width * scale;
+                const projectedY = centerY + (point3D.y - 0.5) * canvas.height * scale;
+               
+                return {
+                    x: projectedX,
+                    y: projectedY,
+                    scale: scale,
+                    depth: rotatedZ
+                };
+            }
+
+
+            function draw3DTrackingPoints() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+               
+                rotationAngle += 0.005;
+               
+                const currentTime = Date.now();
+               
+                // Remove expired points
+                trackingPoints = trackingPoints.filter(point => {
+                    return (currentTime - point.birthTime) < point.lifespan;
+                });
+               
+                // Spawn new points with more dynamic patterns
+                const maxPoints = 15 + Math.floor(Math.sin(time * 0.0005) * 5);
+                const spawnInterval = 100 + Math.sin(time * 0.001) * 50;
+               
+                if (trackingPoints.length < Math.max(8, maxPoints * 0.6) ||
+                    (trackingPoints.length < maxPoints && currentTime - lastSpawnTime > spawnInterval)) {
+                   
+                    // Occasionally spawn multiple points at once (burst mode)
+                    const burstMode = Math.random() > 0.85;
+                    const spawnCount = burstMode ? Math.floor(Math.random() * 3) + 1 : 1;
+                   
+                    for (let i = 0; i < spawnCount; i++) {
+                        trackingPoints.push(generateRandom3DPoint());
+                    }
+                    lastSpawnTime = currentTime;
+                }
+               
+                // Update point positions
+                trackingPoints.forEach(point => {
+                    point.x += point.velocity.x;
+                    point.y += point.velocity.y;
+                    point.z += point.velocity.z;
+                   
+                    if (point.x < 0.1 || point.x > 0.9) point.velocity.x *= -1;
+                    if (point.y < 0.1 || point.y > 0.9) point.velocity.y *= -1;
+                    if (point.z < 0.1 || point.z > 0.9) point.velocity.z *= -1;
+                   
+                    point.x = Math.max(0.1, Math.min(0.9, point.x));
+                    point.y = Math.max(0.1, Math.min(0.9, point.y));
+                    point.z = Math.max(0.1, Math.min(0.9, point.z));
+                });
+               
+                const sortedPoints = [...trackingPoints].sort((a, b) => {
+                    const projA = project3DTo2D(a);
+                    const projB = project3DTo2D(b);
+                    return projA.depth - projB.depth;
+                });
+               
+                // Draw connections between nearby points (multiple types like Tracery)
+                for (let i = 0; i < sortedPoints.length; i++) {
+                    for (let j = i + 1; j < sortedPoints.length; j++) {
+                        const p1 = sortedPoints[i];
+                        const p2 = sortedPoints[j];
+                        const distance = Math.sqrt(
+                            Math.pow(p1.x - p2.x, 2) +
+                            Math.pow(p1.y - p2.y, 2) +
+                            Math.pow(p1.z - p2.z, 2)
+                        );
+                       
+                        if (distance < 0.35) {
+                            const proj1 = project3DTo2D(p1);
+                            const proj2 = project3DTo2D(p2);
+                           
+                            // Dynamic line opacity based on distance
+                            const lineOpacity = (0.35 - distance) / 0.35 * 0.6;
+                           
+                            // Main connection line
+                            ctx.strokeStyle = `rgba(255, 255, 255, ${lineOpacity})`;
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(proj1.x, proj1.y);
+                            ctx.lineTo(proj2.x, proj2.y);
+                            ctx.stroke();
+                           
+                            // Add animated dashed overlay occasionally
+                            if (Math.sin(time * 0.005 + i * 0.7 + j * 0.3) > 0.8) {
+                                ctx.strokeStyle = `rgba(255, 255, 255, ${lineOpacity * 0.8})`;
+                                ctx.lineWidth = 0.5;
+                                ctx.setLineDash([3, 6]);
+                                ctx.beginPath();
+                                ctx.moveTo(proj1.x, proj1.y);
+                                ctx.lineTo(proj2.x, proj2.y);
+                                ctx.stroke();
+                                ctx.setLineDash([]);
+                            }
+                        }
+                    }
+                }
+               
+                // Add data flow lines (like Tracery's advanced connections)
+                if (sortedPoints.length > 2) {
+                    // Sequential connections (chain)
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctx.lineWidth = 1.5;
+                    for (let i = 0; i < sortedPoints.length - 1; i++) {
+                        const proj1 = project3DTo2D(sortedPoints[i]);
+                        const proj2 = project3DTo2D(sortedPoints[i + 1]);
+                       
+                        ctx.beginPath();
+                        ctx.moveTo(proj1.x, proj1.y);
+                        ctx.lineTo(proj2.x, proj2.y);
+                        ctx.stroke();
+                       
+                        // Add flowing dots along the line
+                        const flowProgress = (time * 0.002 + i * 0.5) % 1;
+                        const flowX = proj1.x + (proj2.x - proj1.x) * flowProgress;
+                        const flowY = proj1.y + (proj2.y - proj1.y) * flowProgress;
+                       
+                        ctx.beginPath();
+                        ctx.arc(flowX, flowY, 2, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                        ctx.fill();
+                    }
+                }
+               
+                // Draw tracking points
+                sortedPoints.forEach((point, index) => {
+                    const projected = project3DTo2D(point);
+                    const x = projected.x;
+                    const y = projected.y;
+                    const scale = projected.scale;
+                   
+                    const opacity = 0.5 + scale * 0.5;
+                    const sizeMultiplier = scale;
+                   
+                    const offsetX = Math.sin(time * 0.003 + point.id * 0.5) * 10 * scale;
+                    const offsetY = Math.cos(time * 0.003 + point.id * 0.7) * 10 * scale;
+                   
+                    const finalX = x + offsetX;
+                    const finalY = y + offsetY;
+                   
+                    // Draw tracking square (bounding box)
+                    const squareSize = (15 + Math.sin(time * 0.003 + point.id * 0.5) * 8) * sizeMultiplier;
+                    const cornerSize = 6 * sizeMultiplier;
+                   
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+                    ctx.lineWidth = 1.5 * sizeMultiplier;
+                   
+                    // Draw corner brackets instead of full square for Tracery-like look
+                    ctx.beginPath();
+                    // Top-left corner
+                    ctx.moveTo(finalX - squareSize, finalY - squareSize + cornerSize);
+                    ctx.lineTo(finalX - squareSize, finalY - squareSize);
+                    ctx.lineTo(finalX - squareSize + cornerSize, finalY - squareSize);
+                    // Top-right corner
+                    ctx.moveTo(finalX + squareSize - cornerSize, finalY - squareSize);
+                    ctx.lineTo(finalX + squareSize, finalY - squareSize);
+                    ctx.lineTo(finalX + squareSize, finalY - squareSize + cornerSize);
+                    // Bottom-right corner
+                    ctx.moveTo(finalX + squareSize, finalY + squareSize - cornerSize);
+                    ctx.lineTo(finalX + squareSize, finalY + squareSize);
+                    ctx.lineTo(finalX + squareSize - cornerSize, finalY + squareSize);
+                    // Bottom-left corner
+                    ctx.moveTo(finalX - squareSize + cornerSize, finalY + squareSize);
+                    ctx.lineTo(finalX - squareSize, finalY + squareSize);
+                    ctx.lineTo(finalX - squareSize, finalY + squareSize - cornerSize);
+                    ctx.stroke();
+                   
+                    // Draw center point with type-specific effects
+                    const pulseSize = (point.size - Math.abs(Math.sin(time * point.pulseSpeed + point.id * 0.8)) * (point.size * 0.3)) * sizeMultiplier;
+                   
+                    // Different visual styles based on tracking type
+                    switch(point.trackingType) {
+                        case 'TGT:':
+                            // Target points get double ring
+                            ctx.beginPath();
+                            ctx.arc(finalX, finalY, pulseSize + 3 * sizeMultiplier, 0, Math.PI * 2);
+                            ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.4})`;
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                            break;
+                        case 'OBJ:':
+                            // Object points get square center
+                            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                            ctx.fillRect(finalX - pulseSize, finalY - pulseSize, pulseSize * 2, pulseSize * 2);
+                            break;
+                        case 'NOD:':
+                            // Node points get diamond shape
+                            ctx.beginPath();
+                            ctx.moveTo(finalX, finalY - pulseSize);
+                            ctx.lineTo(finalX + pulseSize, finalY);
+                            ctx.lineTo(finalX, finalY + pulseSize);
+                            ctx.lineTo(finalX - pulseSize, finalY);
+                            ctx.closePath();
+                            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                            ctx.fill();
+                            break;
+                        case 'TRK:':
+                            // Tracking points get animated rotating triangle
+                            const rotation = time * 0.005 + point.id * 0.3;
+                            ctx.save();
+                            ctx.translate(finalX, finalY);
+                            ctx.rotate(rotation);
+                            ctx.beginPath();
+                            ctx.moveTo(0, -pulseSize);
+                            ctx.lineTo(pulseSize * 0.866, pulseSize * 0.5);
+                            ctx.lineTo(-pulseSize * 0.866, pulseSize * 0.5);
+                            ctx.closePath();
+                            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                            ctx.fill();
+                            ctx.restore();
+                            break;
+                        default:
+                            // Default circular points
+                            ctx.beginPath();
+                            ctx.arc(finalX, finalY, pulseSize, 0, Math.PI * 2);
+                            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                            ctx.fill();
+                    }
+                   
+                    // Add scanning lines effect with directional variation
+                    const scanChance = point.trackingType === 'TRK:' ? 0.6 : 0.7;
+                    if (Math.sin(time * 0.01 * point.scanDirection + point.id * 0.3) > scanChance) {
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.6})`;
+                        ctx.lineWidth = 0.5 * sizeMultiplier;
+                        ctx.beginPath();
+                       
+                        if (point.trackingType === 'TGT:') {
+                            // Target gets circular scan
+                            ctx.arc(finalX, finalY, squareSize * 1.8, 0, Math.PI * 2);
+                        } else {
+                            // Others get cross scan
+                            ctx.moveTo(finalX - squareSize * 1.5, finalY);
+                            ctx.lineTo(finalX + squareSize * 1.5, finalY);
+                            ctx.moveTo(finalX, finalY - squareSize * 1.5);
+                            ctx.lineTo(finalX, finalY + squareSize * 1.5);
+                        }
+                        ctx.stroke();
+                    }
+                   
+                    // Generate node ID and draw label
+                    const idNumber = Math.floor(Math.abs(Math.sin(time * 0.002 + point.id * 2.5)) * 9999);
+                   
+                    ctx.font = `${14 * sizeMultiplier}px monospace`;
+                    ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                    const coordX = generateCoordinate(point.x, 0.002, time + point.id * 100);
+                    const coordY = generateCoordinate(point.y, 0.002, time + point.id * 150);
+                    const coordZ = generateCoordinate(point.z, 0.002, time + point.id * 200);
+                    ctx.fillText(`${point.label}_${idNumber}`, finalX + 15 * sizeMultiplier, finalY - 5 * sizeMultiplier);
+                    ctx.font = `${12 * sizeMultiplier}px monospace`;
+                    ctx.fillText(`[${coordX}, ${coordY}, ${coordZ}]`, finalX + 15 * sizeMultiplier, finalY + 10 * sizeMultiplier);
+                });
+            }
+
+
+            function animate() {
+                time = Date.now();
+                frameCount++;
+               
+                draw3DTrackingPoints();
+                updateCoordinateDisplay();
+               
+                requestAnimationFrame(animate);
+            }
+
+
+            animate();
+        }
+
+
+        window.addEventListener('load', setup3DTracking);
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+

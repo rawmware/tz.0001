@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Atom-like Animation with Line</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Central animation (Torus and Infinity Line) */
+        #animation-container {
+            width: 90vw;
+            height: 90vh;
+            border: 1px solid white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* New window for background animation */
+        #background-animation {
+            position: absolute;
+            top: 0%;
+            left: 1%;
+            width: 420px;
+            height: 350px;
+            border: 2px solid rgb(0, 0, 0);
+            background-color: rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        /* WebGL canvas for background animation */
+        #render_area {
+            position: absolute;
+            z-index: 1; /* WebGL canvas */
+        }
+
+        /* Overlay canvas for 2D text rendering */
+        #overlay {
+            position: absolute;
+            z-index: 2; /* 2D canvas for coordinates */
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Torus animation (Center) -->
+    <div id="animation-container">
+        <canvas id="threeCanvas"></canvas>
+    </div>
+
+    <!-- Background animation window (Top-left corner) -->
+    <div id="background-animation">
+        <!-- WebGL canvas for circles and lines -->
+        <canvas id="render_area"></canvas>
+        <!-- 2D canvas for coordinate text labels -->
+        <canvas id="overlay"></canvas>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // CENTRAL TORUS AND INFINITY LINE ANIMATION
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('threeCanvas') });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000); // Black background
+
+        camera.position.z = 35;
+
+        // Lighting Setup
+        const light = new THREE.PointLight(0xffffff, 1);
+        light.position.set(10, 10, 10);
+        scene.add(light);
+
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambientLight);
+
+        // Torus Geometry
+        const torusGeometry = new THREE.TorusGeometry(5, 0.5, 10, 10);
+        const wireframeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+        const wireframeTorus = new THREE.Mesh(torusGeometry, wireframeMaterial);
+        wireframeTorus.rotation.x = Math.PI / 4;
+        wireframeTorus.rotation.y = Math.PI / 4;
+        scene.add(wireframeTorus);
+
+        // Ball Geometry
+        const ballFillMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const ballWireframeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+
+        const lowPolyBallGeometry = new THREE.SphereGeometry(1, 8, 8);
+        const ball1 = new THREE.Mesh(lowPolyBallGeometry, ballFillMaterial);
+        const ball1Wireframe = new THREE.Mesh(lowPolyBallGeometry, ballWireframeMaterial);
+        scene.add(ball1);
+        scene.add(ball1Wireframe);
+
+        const ball2 = new THREE.Mesh(lowPolyBallGeometry, ballFillMaterial);
+        const ball2Wireframe = new THREE.Mesh(lowPolyBallGeometry, ballWireframeMaterial);
+        scene.add(ball2);
+        scene.add(ball2Wireframe);
+
+        // Line Geometry
+        const lineMaterial = new THREE.LineBasicMaterial({ vertexColors: true });
+        const lineGeometry = new THREE.BufferGeometry();
+        const linePositions = new Float32Array(6);
+        lineGeometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+
+        const lineColors = new Float32Array([1, 1, 1, 1, 1, 1]);
+        lineGeometry.setAttribute('color', new THREE.BufferAttribute(lineColors, 3));
+        const line = new THREE.Line(lineGeometry, lineMaterial);
+        scene.add(line);
+
+        function getEllipticalInfinityPath(t) {
+            const a = 6;
+            const b = 4;
+            const zAmplitude = 6;
+
+            const x = a * Math.sin(t);
+            const y = b * Math.sin(2 * t) / 2;
+            const z = zAmplitude * Math.sin(t);
+
+            return { x, y, z, zAmplitude };
+        }
+
+        let time = 0;
+        const torusRotationSpeed = 0.01;
+        const ballRotationSpeed = 0.02;
+        const minScale = 0.5;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.005;
+
+            const pathPosition1 = getEllipticalInfinityPath(time);
+            ball1.position.set(pathPosition1.x, pathPosition1.y, pathPosition1.z);
+            ball1Wireframe.position.set(pathPosition1.x, pathPosition1.y, pathPosition1.z);
+
+            const scale1 = Math.max(minScale, (pathPosition1.z + pathPosition1.zAmplitude) / pathPosition1.zAmplitude);
+            ball1.scale.set(scale1, scale1, scale1);
+            ball1Wireframe.scale.set(scale1, scale1, scale1);
+
+            ball1.rotation.y += ballRotationSpeed;
+            ball1Wireframe.rotation.y += ballRotationSpeed;
+
+            const pathPosition2 = getEllipticalInfinityPath(-time);
+            ball2.position.set(pathPosition2.x, pathPosition2.y, pathPosition2.z);
+            ball2Wireframe.position.set(pathPosition2.x, pathPosition2.y, pathPosition2.z);
+
+            const scale2 = Math.max(minScale, (pathPosition2.z + pathPosition2.zAmplitude) / pathPosition2.zAmplitude);
+            ball2.scale.set(scale2, scale2, scale2);
+            ball2Wireframe.scale.set(scale2, scale2, scale2);
+
+            ball2.rotation.y += ballRotationSpeed;
+            ball2Wireframe.rotation.y += ballRotationSpeed;
+
+            linePositions[0] = pathPosition1.x;
+            linePositions[1] = pathPosition1.y;
+            linePositions[2] = pathPosition1.z;
+            linePositions[3] = pathPosition2.x;
+            linePositions[4] = pathPosition2.y;
+            linePositions[5] = pathPosition2.z;
+            lineGeometry.attributes.position.needsUpdate = true;
+
+            wireframeTorus.rotation.z += torusRotationSpeed;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // BACKGROUND ANIMATION (CIRCLES AND TEXT)
+        const bgCanvas = document.getElementById('render_area');
+        const overlayCanvas = document.getElementById('overlay');
+        const gl = bgCanvas.getContext('webgl');
+        const ctx = overlayCanvas.getContext('2d');
+
+        function resizeBackgroundCanvas() {
+            bgCanvas.width = 420;
+            bgCanvas.height = 350;
+            overlayCanvas.width = 420;
+            overlayCanvas.height = 350;
+            gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+        }
+        window.addEventListener('resize', resizeBackgroundCanvas);
+        resizeBackgroundCanvas();
+
+        let shapes = [];
+        const circleSize = 0.003; // Much smaller circles
+        const minShapes = 4;
+        const maxShapes = 8;
+        const forceFieldPadding = 0.3;
+
+        function createShape() {
+            return {
+                x: Math.random() * (1 - 2 * forceFieldPadding) + forceFieldPadding,
+                y: Math.random() * (1 - 2 * forceFieldPadding) + forceFieldPadding,
+                velocityX: (Math.random() - 0.5) * 0.001,
+                velocityY: (Math.random() - 0.5) * 0.001,
+                size: circleSize, // Smaller size
+                rotation: 0,
+                rotationSpeed: (Math.random() - 0.05) * 1
+            };
+        }
+
+        function createCircleVertices(shape, numSegments = 32) {
+            const vertices = [];
+            const radius = shape.size * 2;
+
+            for (let i = 0; i <= numSegments; i++) {
+                const angle = (i / numSegments) * 2 * Math.PI;
+                const x = shape.x * 2 - 1 + Math.cos(angle) * radius;
+                const y = shape.y * 2 - 1 + Math.sin(angle) * radius;
+                vertices.push(x, y);
+            }
+
+            return vertices;
+        }
+
+        function updateShapes() {
+            const targetNumShapes = minShapes + Math.floor(Math.random() * (maxShapes - minShapes));
+
+            if (shapes.length < targetNumShapes) {
+                while (shapes.length < targetNumShapes) shapes.push(createShape());
+            } else if (shapes.length > targetNumShapes) {
+                shapes.splice(targetNumShapes);
+            }
+
+            for (let shape of shapes) {
+                shape.x += shape.velocityX;
+                shape.y += shape.velocityY;
+
+                shape.rotation += shape.rotationSpeed;
+
+                if (shape.x < forceFieldPadding || shape.x > 1 - forceFieldPadding) {
+                    shape.velocityX *= -1;
+                    shape.x = Math.max(Math.min(shape.x, 1 - forceFieldPadding), forceFieldPadding);
+                }
+
+                if (shape.y < forceFieldPadding || shape.y > 1 - forceFieldPadding) {
+                    shape.velocityY *= -1;
+                    shape.y = Math.max(Math.min(shape.y, 1 - forceFieldPadding), forceFieldPadding);
+                }
+            }
+        }
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error(gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        function createProgram(gl, vertexShaderSource, fragmentShaderSource) {
+            const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+            const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+            const program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error(gl.getProgramInfoLog(program));
+                return null;
+            }
+            return program;
+        }
+
+        const vertexShaderSource = `
+          attribute vec2 a_position;
+          uniform float u_scale;
+          void main() {
+            gl_Position = vec4(a_position * u_scale, 0, 1);
+          }
+        `;
+
+        const fragmentShaderSource = `
+          precision mediump float;
+          uniform vec4 u_color;
+          void main() {
+            gl_FragColor = u_color;
+          }
+        `;
+
+        const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
+        gl.useProgram(program);
+        const positionLocation = gl.getAttribLocation(program, 'a_position');
+        const colorLocation = gl.getUniformLocation(program, 'u_color');
+        const scaleLocation = gl.getUniformLocation(program, 'u_scale');
+
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+        function renderShapes(time) {
+            const positions = [];
+
+            for (let shape of shapes) {
+                positions.push(...createCircleVertices(shape));
+            }
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.DYNAMIC_DRAW);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.uniform4f(colorLocation, 1, 1, 1, 1); // White color for circles
+            gl.uniform1f(scaleLocation, 1.56); // Scale the shapes
+            gl.drawArrays(gl.LINE_LOOP, 0, positions.length / 2);
+
+            // Draw small coordinate text next to circles on the 2D canvas
+            drawCoordinates();
+        }
+
+        // Simple coordinate rendering function on 2D canvas
+        function drawCoordinates() {
+            ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear previous frame
+            ctx.font = '10px Arial';
+            ctx.fillStyle = 'white';
+
+            shapes.forEach(shape => {
+                const coordText = `${(shape.x * 100).toFixed(1)}, ${(shape.y * 100).toFixed(1)}`;
+                ctx.fillText(coordText, shape.x * overlayCanvas.width, shape.y * overlayCanvas.height);
+            });
+        }
+
+        function render(time) {
+            updateShapes();
+            renderShapes(time);
+            requestAnimationFrame(render);
+        }
+
+        gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black
+        render(0);
+    </script>
+</body>
+</html>

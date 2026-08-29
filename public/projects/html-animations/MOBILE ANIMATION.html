@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inverted Colors - Loader</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: black; /* Inverted to black */
+    }
+
+    /* Main canvas for WebGL shapes */
+    canvas {
+      display: block;
+    }
+
+    /* Static box for the grid in bottom-left corner */
+    .grid-box {
+      position: absolute;
+      width: 50vw;
+      height: 11vh;
+      bottom: 1%;
+      left: 10px;
+      border: 1px solid white; /* Inverted to white */
+      overflow: hidden;
+      background-color: transparent;
+      background-image:
+        linear-gradient(white 1px, transparent 1px), /* Inverted to white */
+        linear-gradient(90deg, white 1px, transparent 1px); /* Inverted to white */
+      background-size: 20% 20%;
+      animation: slideGrid 4s linear infinite;
+    }
+
+    @keyframes slideGrid {
+      0% { background-position: 0 0; }
+      100% { background-position: 100% 100%; }
+    }
+
+    /* Loader in top-right corner */
+    .loader-box {
+      position: absolute;
+      width: 30vw;
+      height: 10vh;
+      top: 1%;
+      right: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border: 1px solid white;
+      overflow: hidden;
+    }
+
+    .circle-loader {
+      position: relative;
+      width: 50px;
+      height: 50px;
+    }
+
+    .dot {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: white;
+      border-radius: 50%;
+      opacity: 0;
+      animation: fadeInOut 1.5s linear infinite;
+    }
+
+    .dot:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); animation-delay: 0s; }
+    .dot:nth-child(2) { top: 25%; left: 75%; transform: translate(-50%, -50%); animation-delay: 0.1s; }
+    .dot:nth-child(3) { top: 50%; left: 100%; transform: translate(-50%, -50%); animation-delay: 0.2s; }
+    .dot:nth-child(4) { top: 75%; left: 75%; transform: translate(-50%, -50%); animation-delay: 0.3s; }
+    .dot:nth-child(5) { top: 100%; left: 50%; transform: translateX(-50%); animation-delay: 0.4s; }
+    .dot:nth-child(6) { top: 75%; left: 25%; transform: translate(-50%, -50%); animation-delay: 0.5s; }
+    .dot:nth-child(7) { top: 50%; left: 0; transform: translate(-50%, -50%); animation-delay: 0.6s; }
+    .dot:nth-child(8) { top: 25%; left: 25%; transform: translate(-50%, -50%); animation-delay: 0.7s; }
+
+    @keyframes fadeInOut {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+
+    /* Math typing animation */
+    .typing-box {
+      position: absolute;
+      width: 50vw;
+      height: 4vh;
+      top: 12%;
+      right: 10px;
+      border: 1px solid white;
+      padding: 10px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: transparent;
+      z-index: 1;
+    }
+
+    .typed-math {
+      font-family: "Times New Roman", serif;
+      font-size: 5vw;
+      color: white;
+      white-space: nowrap;
+      overflow: hidden;
+      border-right: 2px solid white;
+      animation: blink 0.75s step-end infinite;
+    }
+
+    @keyframes blink {
+      from { border-right-color: white; }
+      to { border-right-color: transparent; }
+    }
+
+    /* Bouncing window container */
+    .box-top-left {
+      position: absolute;
+      width: 20vw;
+      height: 20vh;
+      top: 1%;
+      left: 10px;
+      border: 2px solid white;
+      overflow: hidden;
+      background-color: transparent;
+    }
+
+    /* Main canvas for bouncing square animation */
+    #bouncingCanvas {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="render_area"></canvas>
+  <div class="grid-box"></div>
+  <div class="loader-box">
+    <div class="circle-loader">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+  </div>
+
+  <div class="typing-box">
+    <div class="typed-math" id="typed-math"></div>
+  </div>
+
+  <div class="box-top-left">
+    <canvas id="bouncingCanvas"></canvas>
+  </div>
+
+  <script>
+    // List of custom names to type
+    const algorithms = [
+      "RawmWare", "℞awm₩arε", "RawmWare", "ℝaωℳ₩αℝℨ", "ℜꣳωℳ₩꣸ℝℇ",
+      "℞αωm₩α℞ε", "ℜλωℳ₩σℝψ", "RawmWare 0_0", ">_<", "._. rawmware"
+    ];
+
+    const typedMathElement = document.getElementById("typed-math");
+    let currentAlgorithmIndex = 0;
+
+    function typeAlgorithm() {
+      const currentAlgorithm = algorithms[currentAlgorithmIndex];
+      typedMathElement.textContent = ""; 
+      let index = 0;
+      const typingSpeed = 40;
+
+      function typeChar() {
+        if (index < currentAlgorithm.length) {
+          typedMathElement.textContent += currentAlgorithm[index++];
+          setTimeout(typeChar, typingSpeed);
+        } else {
+          typedMathElement.textContent += ' ';
+          setTimeout(() => {
+            currentAlgorithmIndex = (currentAlgorithmIndex + 1) % algorithms.length;
+            typeAlgorithm();
+          }, 500);
+        }
+      }
+
+      typeChar();
+    }
+
+    typeAlgorithm();
+
+    // Bouncing square with small square emission
+    class BouncingWindow {
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.x = canvas.width / 2 - 15;
+        this.y = canvas.height / 2 - 15;
+        this.size = 30;
+        this.velocityX = (Math.random() - 0.5) * 0.7;
+        this.velocityY = (Math.random() - 0.5) * 0.7;
+        this.squares = [];
+      }
+
+      move() {
+        this.x += this.velocityX;
+        this.y += this.velocityY;
+
+        if (this.x <= 0 || this.x + this.size >= this.canvas.width) {
+          this.velocityX *= -1;
+          this.emitSmallSquares(50);  // Emit larger amount on bounce
+        }
+
+        if (this.y <= 0 || this.y + this.size >= this.canvas.height) {
+          this.velocityY *= -1;
+          this.emitSmallSquares(50);  // Emit larger amount on bounce
+        }
+
+        this.emitSmallSquares(3); // Constant emission
+      }
+
+      draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.strokeStyle = 'white';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(this.x, this.y, this.size, this.size);
+
+        this.squares = this.squares.filter(square => !square.done);
+        this.squares.forEach(square => square.draw());
+      }
+
+      emitSmallSquares(amount) {
+        for (let i = 0; i < amount; i++) {
+          this.squares.push(new SmallSquare(this.ctx, this.x + this.size / 2, this.y + this.size / 2));
+        }
+      }
+    }
+
+    class SmallSquare {
+      constructor(ctx, x, y) {
+        this.ctx = ctx;
+        this.x = x;
+        this.y = y;
+        this.size = 5;
+        this.velocityX = (Math.random() - 0.5) * 2;
+        this.velocityY = (Math.random() - 0.5) * 2;
+        this.lifeSpan = 60;
+        this.done = false;
+      }
+
+      draw() {
+        this.x += this.velocityX;
+        this.y += this.velocityY;
+        this.lifeSpan--;
+        if (this.lifeSpan <= 0) this.done = true;
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(this.x, this.y, this.size, this.size);
+      }
+    }
+
+    const bouncingCanvas = document.getElementById('bouncingCanvas');
+    bouncingCanvas.width = bouncingCanvas.clientWidth;
+    bouncingCanvas.height = bouncingCanvas.clientHeight;
+    const bouncingWindow = new BouncingWindow(bouncingCanvas);
+
+    function animateBouncingWindow() {
+      bouncingWindow.move();
+      bouncingWindow.draw();
+      requestAnimationFrame(animateBouncingWindow);
+    }
+
+    animateBouncingWindow();
+
+    // WebGL for shape animation
+    const canvas = document.getElementById('render_area');
+    const gl = canvas.getContext('webgl');
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    if (!gl) alert('WebGL not supported');
+
+    let shapes = [];
+    const maxSize = 0.1;
+    const minSize = 0.03;
+    const SHAPE_TYPES = ["square", "circle", "triangle"];
+
+    const minShapes = 5;
+    const maxShapes = 15;
+    const forceFieldPadding = 0.25;
+
+    function createShape() {
+      return {
+        x: Math.random() * (1 - 2 * forceFieldPadding) + forceFieldPadding,
+        y: Math.random() * (1 - 2 * forceFieldPadding) + forceFieldPadding,
+        velocityX: (Math.random() - 0.5) * 0.002,
+        velocityY: (Math.random() - 0.5) * 0.002,
+        baseSize: Math.random() * (maxSize - minSize) + minSize,
+        type: SHAPE_TYPES[Math.floor(Math.random() * SHAPE_TYPES.length)],
+        timeOffset: Math.random() * 100
+      };
+    }
+
+    function updateShapes(time) {
+      const noiseValue = Math.sin(time * 0.03) * 0.5 + 0.5;
+      const targetNumShapes = Math.floor(noiseValue * (maxShapes - minShapes)) + minShapes;
+
+      if (shapes.length < targetNumShapes) {
+        while (shapes.length < targetNumShapes) shapes.push(createShape());
+      } else if (shapes.length > targetNumShapes) {
+        shapes.splice(targetNumShapes);
+      }
+
+      for (let shape of shapes) {
+        shape.x += shape.velocityX;
+        shape.y += shape.velocityY;
+
+        if (shape.x < forceFieldPadding || shape.x > 1 - forceFieldPadding) {
+          shape.velocityX *= -1;
+          shape.x = Math.max(Math.min(shape.x, 1 - forceFieldPadding), forceFieldPadding);
+        }
+
+        if (shape.y < forceFieldPadding || shape.y > 1 - forceFieldPadding) {
+          shape.velocityY *= -1;
+          shape.y = Math.max(Math.min(shape.y, 1 - forceFieldPadding), forceFieldPadding);
+        }
+
+        shape.size = shape.baseSize * (0.5 + Math.sin(time * 0.001 + shape.timeOffset) * 0.5);
+      }
+    }
+
+    function createShader(gl, type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+      }
+      return shader;
+    }
+
+    function createProgram(gl, vertexShaderSource, fragmentShaderSource) {
+      const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+      const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+      const program = gl.createProgram();
+      gl.attachShader(program, vertexShader);
+      gl.attachShader(program, fragmentShader);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error(gl.getProgramInfoLog(program));
+        return null;
+      }
+      return program;
+    }
+
+    const vertexShaderSource = `
+      attribute vec2 a_position;
+      void main() {
+        gl_Position = vec4(a_position, 0, 1);
+      }
+    `;
+
+    const fragmentShaderSource = `
+      precision mediump float;
+      uniform vec4 u_color;
+      void main() {
+        gl_FragColor = u_color;
+      }
+    `;
+
+    const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
+    gl.useProgram(program);
+    const positionLocation = gl.getAttribLocation(program, 'a_position');
+    const colorLocation = gl.getUniformLocation(program, 'u_color');
+
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+    function createShapeVertices(shape) {
+      const halfSize = shape.size;
+      switch (shape.type) {
+        case "square":
+          return [
+            shape.x * 2 - 1 - halfSize, shape.y * 2 - 1 - halfSize,
+            shape.x * 2 - 1 + halfSize, shape.y * 2 - 1 - halfSize,
+            shape.x * 2 - 1 + halfSize, shape.y * 2 - 1 + halfSize,
+            shape.x * 2 - 1 - halfSize, shape.y * 2 - 1 + halfSize,
+            shape.x * 2 - 1 - halfSize, shape.y * 2 - 1 - halfSize
+          ];
+        case "circle":
+          const circleVertices = [];
+          const numSegments = 30;
+          for (let i = 0; i <= numSegments; i++) {
+            const theta = (i / numSegments) * Math.PI * 2;
+            const x = halfSize * Math.cos(theta) + shape.x * 2 - 1;
+            const y = halfSize * Math.sin(theta) + shape.y * 2 - 1;
+            circleVertices.push(x, y);
+          }
+          return circleVertices;
+        case "triangle":
+          return [
+            shape.x * 2 - 1, shape.y * 2 - 1 + halfSize,
+            shape.x * 2 - 1 - halfSize, shape.y * 2 - 1 - halfSize,
+            shape.x * 2 - 1 + halfSize, shape.y * 2 - 1 - halfSize,
+            shape.x * 2 - 1, shape.y * 2 - 1 + halfSize
+          ];
+        default:
+          return [];
+      }
+    }
+
+    function renderShapesAndConnections(time) {
+      const positions = [];
+      for (let shape of shapes) {
+        positions.push(...createShapeVertices(shape));
+      }
+
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.DYNAMIC_DRAW);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.uniform4f(colorLocation, 1, 1, 1, 1);
+      gl.drawArrays(gl.LINE_STRIP, 0, positions.length / 2);
+
+      const lines = [];
+      for (let i = 0; i < shapes.length; i++) {
+        const x = shapes[i].x * 2 - 1;
+        const y = shapes[i].y * 2 - 1;
+        lines.push(x, y);
+      }
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lines), gl.DYNAMIC_DRAW);
+      gl.drawArrays(gl.LINE_STRIP, 0, lines.length / 2);
+    }
+
+    function render(time) {
+      updateShapes(time);
+      renderShapesAndConnections(time);
+      requestAnimationFrame(render);
+    }
+
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    render(0);
+  </script>
+</body>
+</html>

@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Virus Effect Button</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: rgba(255, 255, 255, 1); /* Change to white */
+        }
+
+        #imageWindow {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            height: 150px; /* Increased height */
+            width: 150px;  /* Increased width */
+            border: 2px solid #000; /* Changed border to black */
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #fff;
+            font-size: 14px;
+            background-color: transparent; /* Transparent background */
+            overflow: hidden; /* Ensure spinner stays within bounds */
+        }
+
+        .spinner {
+            width: 70px; /* Adjusted size for larger window */
+            height: 70px; /* Adjusted size for larger window */
+            border: 5px solid transparent;
+            border-top: 5px solid red;
+            border-radius: 50%;
+            animation: spin 1s linear infinite, colorChange 3s infinite alternate;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes colorChange {
+            0% { border-top-color: red; }
+            20% { border-top-color: orange; }
+            40% { border-top-color: yellow; }
+            60% { border-top-color: green; }
+            80% { border-top-color: blue; }
+            100% { border-top-color: violet; }
+        }
+
+        #backgroundImage {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -2;
+            display: none;
+        }
+
+        .glitch-container {
+            position: absolute;
+            top: 40%; /* Changed from 50% to move it higher */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            overflow: visible;
+            z-index: -1;
+        }
+
+        .glitch-image-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 600px; /* Increased from 300px */
+            height: 600px; /* Increased from 300px */
+            margin-bottom: 10px;
+            border: 2px solid #000;
+            box-sizing: border-box;
+            animation: continuousFloat 5s infinite linear;
+        }
+
+        .glitch-image {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            height: calc(100% - 20px);
+            object-fit: cover;
+            opacity: 0.99;
+        }
+
+        .window-title-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background-color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 5px;
+            box-sizing: border-box;
+            color: #fff;
+            font-size: 15px;
+        }
+
+        .window-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .window-button {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-size: 9px;
+            font-weight: bold;
+            animation: rainbowColor 3s infinite alternate;
+        }
+
+        .window-button.minimize::before { content: "-"; }
+        .window-button.maximize::before { content: "+"; }
+        .window-button.close::before { content: "x"; }
+
+        @keyframes rainbowColor {
+            0% { background-color: red; }
+            20% { background-color: orange; }
+            40% { background-color: yellow; }
+            60% { background-color: green; }
+            80% { background-color: blue; }
+            100% { background-color: violet; }
+        }
+
+        @keyframes retroGlitchEffect {
+            0% { transform: translate(0, 0) scale(1); }
+            10% { transform: translate(-10px, -10px) scale(1.05) rotate(1deg); }
+            20% { transform: translate(10px, 10px) scale(0.95) rotate(-1deg); }
+            30% { transform: translate(-15px, 15px) scale(1.1) rotate(2deg); }
+            40% { transform: translate(15px, -15px) scale(0.9) rotate(-2deg); }
+            50% { transform: translate(-20px, 20px) scale(1.15) rotate(3deg); }
+            60% { transform: translate(20px, -20px) scale(0.85) rotate(-3deg); }
+            70% { transform: translate(25px, 25px) scale(1.2) rotate(4deg); }
+            80% { transform: translate(-25px, -25px) scale(0.8) rotate(-4deg); }
+            90% { transform: translate(0, 0) scale(1.25) rotate(5deg); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        @keyframes layerGlitchEffect {
+            0% { transform: translate(0, 0); z-index: 1; }
+            20% { transform: translate(10px, -10px); z-index: 2; }
+            40% { transform: translate(-10px, 10px); z-index: 3; }
+            60% { transform: translate(15px, -15px); z-index: 4; }
+            80% { transform: translate(-15px, 15px); z-index: 5; }
+            100% { transform: translate(0, 0); z-index: 6; }
+        }
+
+        @keyframes continuousFloat {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(50px, -50px); } /* Increased translation */
+            50% { transform: translate(-50px, 50px); } /* Increased translation */
+            75% { transform: translate(70px, 70px); }  /* Increased translation */
+            100% { transform: translate(0, 0); }
+        }
+
+    </style>
+</head>
+<body>
+    <div id="imageWindow">
+        <div class="window-title-bar">
+            Rawmware.OS
+            <div class="window-buttons">
+                <div class="window-button minimize"></div>
+                <div class="window-button maximize"></div>
+                <div class="window-button close"></div>
+            </div>
+        </div>
+        <div class="spinner"></div>
+    </div>
+    <input type="file" id="fileInput" style="display: none;" accept="image/*">
+    <img id="backgroundImage" alt="background">
+    <div id="glitchContainer" class="glitch-container" style="display: none;"></div>
+
+    <!-- Existing Three.js Animation Window -->
+    <div id="threejsWindow" style="position: absolute; bottom: 10px; left: 10px; width: 200px; height: 180px; border: 2px solid black; cursor: pointer; display: flex; flex-direction: column; background-color: white; overflow: hidden; z-index: 1;">
+        <div class="window-title-bar" style="z-index: 1;">
+            Rawmware.OS
+            <div class="window-buttons">
+                <div class="window-button minimize"></div>
+                <div class="window-button maximize"></div>
+                <div class="window-button close"></div>
+            </div>
+        </div>
+        <div id="threejsContainer" style="flex-grow: 0;"></div>
+    </div>
+
+    <!-- New Background Animation Window (Rawmware.OS style) -->
+    <div id="background-animation" style="position: absolute; bottom: 10px; right: 10px; width: 420px; height: 350px; border: 2px solid #000; cursor: pointer; display: flex; flex-direction: column; background-color: transparent; overflow: hidden; z-index: 2;">
+        <div class="window-title-bar" style="z-index: 3;">
+            Rawmware.OS
+            <div class="window-buttons">
+                <div class="window-button minimize"></div>
+                <div class="window-button maximize"></div>
+                <div class="window-button close"></div>
+            </div>
+        </div>
+        <canvas id="render_area" style="position: absolute; z-index: 1;"></canvas>
+        <canvas id="overlay" style="position: absolute; z-index: 2;"></canvas>
+    </div>
+
+    <!-- New top-left window for 3D ASCII text animation (Rawmware.OS style) -->
+    <div id="top-left-window" style="position: absolute; top: 10px; left: 10px; width: 200px; height: 200px; border: 2px solid #000; cursor: pointer; display: flex; flex-direction: column; background-color: white; overflow: hidden; z-index: 2;">
+        <div class="window-title-bar" style="z-index: 1;">
+            Rawmware.OS
+            <div class="window-buttons">
+                <div class="window-button minimize"></div>
+                <div class="window-button maximize"></div>
+                <div class="window-button close"></div>
+            </div>
+        </div>
+        <div id="ascii-animation-container" style="position: relative; flex-grow: 1;"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FontLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/TextGeometry.js"></script>
+
+    <script>
+        // Existing Animation Code
+        const imageWindow = document.getElementById('imageWindow');
+        const fileInput = document.getElementById('fileInput');
+        const glitchContainer = document.getElementById('glitchContainer');
+        const backgroundImage = document.getElementById('backgroundImage');
+
+        imageWindow.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    // Set the background image
+                    backgroundImage.src = e.target.result;
+                    backgroundImage.style.display = 'block';
+                    document.body.style.backgroundColor = '#000'; // Change background to black after image is selected
+
+                    // Create glitch images
+                    glitchContainer.innerHTML = '';
+                    const positions = [
+                        { x: 0, y: 0 }, // Center
+                        { x: 20, y: 20 }, // Top-left (increased offset)
+                        { x: -20, y: -20 }, // Bottom-right (increased offset)
+                        { x: 40, y: -40 }, // Top-right (increased offset)
+                        { x: -40, y: 40 }  // Bottom-left (increased offset)
+                    ];
+
+                    positions.forEach(position => {
+                        for (let i = 0; i < 10; i++) {
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'glitch-image-wrapper';
+                            wrapper.style.animationDelay = `${i * 0.3}s`;
+
+                            // Initial position (increased offset)
+                            wrapper.style.transform = `translate(${position.x * 2}px, ${position.y * 2}px)`;
+
+                            const titleBar = document.createElement('div');
+                            titleBar.className = 'window-title-bar';
+                            titleBar.innerHTML = `Rawmware.OS`;
+
+                            const windowButtons = document.createElement('div');
+                            windowButtons.className = 'window-buttons';
+
+                            const closeButton = document.createElement('div');
+                            closeButton.className = 'window-button close';
+                            const maximizeButton = document.createElement('div');
+                            maximizeButton.className = 'window-button maximize';
+                            const minimizeButton = document.createElement('div');
+                            minimizeButton.className = 'window-button minimize';
+
+                            windowButtons.appendChild(minimizeButton);
+                            windowButtons.appendChild(maximizeButton);
+                            windowButtons.appendChild(closeButton);
+                            titleBar.appendChild(windowButtons);
+
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.className = 'glitch-image';
+
+                            wrapper.appendChild(titleBar);
+                            wrapper.appendChild(img);
+                            glitchContainer.appendChild(wrapper);
+                        }
+                    });
+
+                    glitchContainer.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Existing Three.js Scene Setup for Skeleton Animation
+        const sceneSkeleton = new THREE.Scene();
+        sceneSkeleton.background = new THREE.Color(0xffffff); // Set the scene background to white
+
+        const cameraSkeleton = new THREE.PerspectiveCamera(75, 1, 0.1, 1000); // Aspect ratio set to 1 for square container
+        cameraSkeleton.position.z = 3;
+        cameraSkeleton.position.x = 0;
+        cameraSkeleton.position.y = -1;
+
+        const rendererSkeleton = new THREE.WebGLRenderer({ antialias: true, alpha: true }); // Enable transparency
+        rendererSkeleton.setSize(200, 200); // Match the container size
+        document.getElementById('threejsContainer').appendChild(rendererSkeleton.domElement);
+
+        // Create OrbitControls for Skeleton
+        const controlsSkeleton = new THREE.OrbitControls(cameraSkeleton, rendererSkeleton.domElement);
+        controlsSkeleton.enableDamping = true;
+
+        // Create materials for lines, wireframe, and rainbow effect
+        const lineMaterialSkeleton = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 8 }); // Thicker lines
+        const oscillatingLineMaterialSkeleton = new THREE.LineBasicMaterial({ color: 0x555555, linewidth: 2 });
+        const fasterOscillatingLineMaterialSkeleton = new THREE.LineBasicMaterial({ color: 0xaa0000, linewidth: 2 });
+        const wireframeMaterialSkeleton = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
+        const rainbowMaterialSkeleton = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: false });
+
+        // Function to create a labeled joint (sphere and text)
+        function createJointSkeleton(position, label, labelOffset = new THREE.Vector3(0.3, 0.15, 0)) {
+            const radius = 0.1;
+            const sphereGeometry = new THREE.SphereGeometry(radius, 8, 8); // Reduced poly count
+
+            // Create wireframe sphere
+            const wireframeSphere = new THREE.Mesh(sphereGeometry, wireframeMaterialSkeleton);
+            wireframeSphere.position.copy(position);
+            sceneSkeleton.add(wireframeSphere);
+
+            // Create rainbow effect sphere
+            const rainbowSphere = new THREE.Mesh(sphereGeometry, rainbowMaterialSkeleton);
+            rainbowSphere.position.copy(position);
+            sceneSkeleton.add(rainbowSphere);
+
+            // Add text label
+            const loader = new THREE.FontLoader();
+            loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
+                const textGeometry = new THREE.TextGeometry(label, {
+                    font: font,
+                    size: 0.1,
+                    height: 0.01,
+                });
+                const textMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                const text = new THREE.Mesh(textGeometry, textMaterial);
+                text.position.copy(position).add(labelOffset);
+                sceneSkeleton.add(text);
+            });
+        }
+
+        // Function to create bones (lines)
+        function createBoneSkeleton(start, end) {
+            const points = [start, end];
+
+            // Create the thicker base line
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(geometry, lineMaterialSkeleton);
+            sceneSkeleton.add(line);
+
+            // Create multiple oscillating lines
+            for (let i = 0; i < 10; i++) {
+                const oscillatingLineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+                const oscillatingLineMaterial = new THREE.LineBasicMaterial({ color: new THREE.Color(`hsl(${(i * 36) % 360}, 100%, 50%)`), linewidth: 1 });
+                const oscillatingLine = new THREE.Line(oscillatingLineGeometry, oscillatingLineMaterial);
+                oscillatingLine.userData = {
+                    start,
+                    end,
+                    amplitude: 0.02 * (i + 1),
+                    frequency: 0.01 * (i + 1),
+                };
+                oscillatingLinesSkeleton.push(oscillatingLine);
+                sceneSkeleton.add(oscillatingLine);
+            }
+        }
+
+        // Define key points for the skeleton
+        const pointsSkeleton = {
+            head: new THREE.Vector3(0, 2, 0),
+            neck: new THREE.Vector3(0, 1.5, 0),
+            leftShoulder: new THREE.Vector3(-0.5, 1.5, 0), // Adjusted to the left for better spacing
+            rightShoulder: new THREE.Vector3(0.5, 1.5, 0),
+            leftElbow: new THREE.Vector3(-1, 1, 0),
+            rightElbow: new THREE.Vector3(1, 1, 0),
+            leftHand: new THREE.Vector3(-1.5, 0.5, 0),
+            rightHand: new THREE.Vector3(1.5, 0.5, 0),
+            spine: new THREE.Vector3(0, 1, 0),
+            hips: new THREE.Vector3(0, 0.5, 0),
+            leftKnee: new THREE.Vector3(-0.5, -0.5, 0),
+            rightKnee: new THREE.Vector3(0.5, -0.5, 0),
+            leftFoot: new THREE.Vector3(-0.5, -1.5, 0),
+            rightFoot: new THREE.Vector3(0.5, -1.5, 0),
+        };
+
+        // Create joints with adjusted label offsets
+        createJointSkeleton(pointsSkeleton.head, 'head', new THREE.Vector3(0.2, 0.3, 0));
+        createJointSkeleton(pointsSkeleton.leftShoulder, 'left shoulder', new THREE.Vector3(-0.9, 0, 0)); // Moved to left shoulder joint
+        createJointSkeleton(pointsSkeleton.rightShoulder, 'right shoulder', new THREE.Vector3(0.2, 0, 0));
+        createJointSkeleton(pointsSkeleton.leftElbow, 'left elbow', new THREE.Vector3(-0.3, 0.15, 0));
+        createJointSkeleton(pointsSkeleton.rightElbow, 'right elbow', new THREE.Vector3(0.3, 0.15, 0));
+        createJointSkeleton(pointsSkeleton.leftHand, 'left hand', new THREE.Vector3(-0.4, 0.15, 0));
+        createJointSkeleton(pointsSkeleton.rightHand, 'right hand', new THREE.Vector3(0.4, 0.15, 0));
+        createJointSkeleton(pointsSkeleton.spine, 'spine', new THREE.Vector3(0.2, 0.3, 0));
+        createJointSkeleton(pointsSkeleton.hips, 'hips', new THREE.Vector3(0.2, 0.15, 0));
+        createJointSkeleton(pointsSkeleton.leftKnee, 'left knee', new THREE.Vector3(-0.3, 0.15, 0));
+        createJointSkeleton(pointsSkeleton.rightKnee, 'right knee', new THREE.Vector3(0.3, 0.15, 0));
+        createJointSkeleton(pointsSkeleton.leftFoot, 'left foot', new THREE.Vector3(-0.3, 0.15, 0));
+        createJointSkeleton(pointsSkeleton.rightFoot, 'right foot', new THREE.Vector3(0.3, 0.15, 0));
+
+        // Array to store oscillating lines for Skeleton
+        const oscillatingLinesSkeleton = [];
+
+        // Create bones for Skeleton
+        createBoneSkeleton(pointsSkeleton.head, pointsSkeleton.neck);
+        createBoneSkeleton(pointsSkeleton.neck, pointsSkeleton.leftShoulder);
+        createBoneSkeleton(pointsSkeleton.neck, pointsSkeleton.rightShoulder);
+        createBoneSkeleton(pointsSkeleton.leftShoulder, pointsSkeleton.leftElbow);
+        createBoneSkeleton(pointsSkeleton.rightShoulder, pointsSkeleton.rightElbow);
+        createBoneSkeleton(pointsSkeleton.leftElbow, pointsSkeleton.leftHand);
+        createBoneSkeleton(pointsSkeleton.rightElbow, pointsSkeleton.rightHand);
+        createBoneSkeleton(pointsSkeleton.neck, pointsSkeleton.spine);
+        createBoneSkeleton(pointsSkeleton.spine, pointsSkeleton.hips);
+        createBoneSkeleton(pointsSkeleton.hips, pointsSkeleton.leftKnee);
+        createBoneSkeleton(pointsSkeleton.hips, pointsSkeleton.rightKnee);
+        createBoneSkeleton(pointsSkeleton.leftKnee, pointsSkeleton.leftFoot);
+        createBoneSkeleton(pointsSkeleton.rightKnee, pointsSkeleton.rightFoot);
+
+        // Swivel animation parameters for Skeleton
+        let swivelAngleSkeleton = 0;
+        let swivelDirectionSkeleton = 1;
+
+        // Animation loop for Skeleton
+        function animateSkeleton() {
+            requestAnimationFrame(animateSkeleton);
+            controlsSkeleton.update();
+
+            // Swivel the entire scene slightly back and forth
+            swivelAngleSkeleton += 0.002 * swivelDirectionSkeleton;
+            if (swivelAngleSkeleton > 0.1 || swivelAngleSkeleton < -0.1) {
+                swivelDirectionSkeleton *= -1;
+            }
+            sceneSkeleton.rotation.y = swivelAngleSkeleton;
+
+            // Update rainbow material color
+            rainbowMaterialSkeleton.color.setHSL((performance.now() % 10000) / 10000, 1, 0.5);
+
+            // Update oscillating lines to create the oscillating effect
+            oscillatingLinesSkeleton.forEach((line) => {
+                const { start, end, amplitude, frequency } = line.userData;
+                const time = performance.now() * frequency;
+                const newPoints = [
+                    start.clone(),
+                    new THREE.Vector3(
+                        (start.x + end.x) / 2 + Math.sin(time) * amplitude,
+                        (start.y + end.y) / 2 + Math.cos(time) * amplitude,
+                        (start.z + end.z) / 2
+                    ),
+                    end.clone()
+                ];
+                line.geometry.setFromPoints(newPoints);
+                line.geometry.attributes.position.needsUpdate = true;
+            });
+
+            rendererSkeleton.render(sceneSkeleton, cameraSkeleton);
+        }
+
+        animateSkeleton();
+
+        // Add the new Background Animation Code
+        const bgCanvas = document.getElementById('render_area');
+        const overlayCanvas = document.getElementById('overlay');
+        const gl = bgCanvas.getContext('webgl');
+        const ctx = overlayCanvas.getContext('2d');
+
+        function resizeBackgroundCanvas() {
+            bgCanvas.width = 420;
+            bgCanvas.height = 328; // Adjusted for title bar height
+            overlayCanvas.width = 420;
+            overlayCanvas.height = 328; // Adjusted for title bar height
+            gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+        }
+        window.addEventListener('resize', resizeBackgroundCanvas);
+        resizeBackgroundCanvas();
+
+        let shapes = [];
+        const circleSize = 0.005; // Much smaller circles
+        const minShapes = 4;
+        const maxShapes = 8;
+        const forceFieldPadding = 0.3;
+
+        function createShape() {
+            return {
+                x: Math.random() * (1 - 2 * forceFieldPadding) + forceFieldPadding,
+                y: Math.random() * (1 - 2 * forceFieldPadding) + forceFieldPadding,
+                velocityX: (Math.random() - 0.5) * 0.001,
+                velocityY: (Math.random() - 0.5) * 0.001,
+                size: circleSize, // Smaller size
+                rotation: 2,
+                rotationSpeed: (Math.random() - 0.05) * 1
+            };
+        }
+
+        function createCircleVertices(shape, numSegments = 32) {
+            const vertices = [];
+            const radius = shape.size * 2;
+
+            for (let i = 0; i <= numSegments; i++) {
+                const angle = (i / numSegments) * 2 * Math.PI;
+                const x = shape.x * 2 - 1 + Math.cos(angle) * radius;
+                const y = shape.y * 2 - 1 + Math.sin(angle) * radius;
+                vertices.push(x, y);
+            }
+
+            return vertices;
+        }
+
+        function updateShapes() {
+            const targetNumShapes = minShapes + Math.floor(Math.random() * (maxShapes - minShapes));
+
+            if (shapes.length < targetNumShapes) {
+                while (shapes.length < targetNumShapes) shapes.push(createShape());
+            } else if (shapes.length > targetNumShapes) {
+                shapes.splice(targetNumShapes);
+            }
+
+            for (let shape of shapes) {
+                shape.x += shape.velocityX;
+                shape.y += shape.velocityY;
+
+                shape.rotation += shape.rotationSpeed;
+
+                if (shape.x < forceFieldPadding || shape.x > 1 - forceFieldPadding) {
+                    shape.velocityX *= -1;
+                    shape.x = Math.max(Math.min(shape.x, 1 - forceFieldPadding), forceFieldPadding);
+                }
+
+                if (shape.y < forceFieldPadding || shape.y > 1 - forceFieldPadding) {
+                    shape.velocityY *= -1;
+                    shape.y = Math.max(Math.min(shape.y, 1 - forceFieldPadding), forceFieldPadding);
+                }
+            }
+        }
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error(gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        function createProgram(gl, vertexShaderSource, fragmentShaderSource) {
+            const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+            const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+            const program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error(gl.getProgramInfoLog(program));
+                return null;
+            }
+            return program;
+        }
+
+        const vertexShaderSource = `
+          attribute vec2 a_position;
+          uniform float u_scale;
+          void main() {
+            gl_Position = vec4(a_position * u_scale, 0, 1);
+          }
+        `;
+
+        const fragmentShaderSource = `
+          precision mediump float;
+          uniform vec4 u_color;
+          void main() {
+            gl_FragColor = u_color;
+          }
+        `;
+
+        const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
+        gl.useProgram(program);
+        const positionLocation = gl.getAttribLocation(program, 'a_position');
+        const colorLocation = gl.getUniformLocation(program, 'u_color');
+        const scaleLocation = gl.getUniformLocation(program, 'u_scale');
+
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+        function renderShapes(time) {
+            const positions = [];
+
+            for (let shape of shapes) {
+                positions.push(...createCircleVertices(shape));
+            }
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.DYNAMIC_DRAW);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.uniform4f(colorLocation, 0, 0, 0, 1); // Black color for circles
+            gl.uniform1f(scaleLocation, 1.56); // Scale the shapes
+            gl.drawArrays(gl.LINE_LOOP, 0, positions.length / 2);
+
+            // Draw small coordinate text next to circles on the 2D canvas
+            drawCoordinates();
+        }
+
+        // Simple coordinate rendering function on 2D canvas
+        function drawCoordinates() {
+            ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear previous frame
+            ctx.font = '15px Times New Roman Bold Italic';
+            ctx.fillStyle = 'black'; // Changed to black
+
+            shapes.forEach(shape => {
+                const coordText = `${(shape.x * 100).toFixed(1)}, ${(shape.y * 100).toFixed(1)}`;
+                ctx.fillText(coordText, shape.x * overlayCanvas.width, shape.y * overlayCanvas.height);
+            });
+        }
+
+        function render(time) {
+            updateShapes();
+            renderShapes(time);
+            requestAnimationFrame(render);
+        }
+
+        gl.clearColor(1.0, 1.0, 1.0, 1.0); // Change to white background
+        render(0);
+
+
+        // Call this function when a new image is selected
+        fileInput.addEventListener('change', (event) => {
+            // ... existing code ...
+            updateBackgroundImage();
+        });
+
+        // Handle window resize for both animations
+        window.addEventListener('resize', () => {
+            // Resize Skeleton Renderer
+            const containerSkeleton = document.getElementById('threejsContainer');
+            const widthSkeleton = containerSkeleton.clientWidth;
+            const heightSkeleton = containerSkeleton.clientHeight;
+            rendererSkeleton.setSize(widthSkeleton, heightSkeleton);
+            cameraSkeleton.aspect = widthSkeleton / heightSkeleton;
+            cameraSkeleton.updateProjectionMatrix();
+        });
+
+        // 3D ASCII Text Scene, Camera, Renderer
+        const textScene = new THREE.Scene();
+        textScene.background = new THREE.Color(0xffffff); // Set the background to white
+        const textCamera = new THREE.PerspectiveCamera(75, 200 / 200, 0.1, 1000); // Adjusted aspect ratio
+        const textRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        textRenderer.setSize(200, 200); // Adjusted height to account for title bar
+        document.getElementById('ascii-animation-container').appendChild(textRenderer.domElement);
+
+        // Load font and create text
+        const fontLoader = new THREE.FontLoader();
+        fontLoader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', (font) => {
+            // Function to create random 3D text
+            function createRandomText() {
+                const characters = '0123456789!@#$%^&*()_+[]{}|;:,.<>?/~`±§漢字';
+                const randomChar = characters.charAt(Math.floor(Math.random() * characters.length));
+
+                const textGeometry = new THREE.TextGeometry(randomChar, {
+                    font: font,
+                    size: 0.5,
+                    height: 0.2,
+                    curveSegments: 4,
+                    bevelEnabled: true,
+                    bevelThickness: 0.03,
+                    bevelSize: 0.02,
+                    bevelOffset: 0,
+                    bevelSegments: 3
+                });
+
+                const rainbowMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const wireframeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
+                const textMesh = new THREE.Mesh(textGeometry, [rainbowMaterial, wireframeMaterial]);
+
+                const boundingBoxSize = 3;
+                textMesh.position.set(
+                    (Math.random() - 0.5) * boundingBoxSize,
+                    (Math.random() - 0.5) * boundingBoxSize,
+                    (Math.random() - 0.5) * boundingBoxSize
+                );
+
+                textScene.add(textMesh);
+
+                const colorChange = () => {
+                    rainbowMaterial.color.setHSL((Date.now() % 1000) / 1000, 1, 0.5);
+                    requestAnimationFrame(colorChange);
+                };
+                colorChange();
+
+                const bounceSpeed = 0.009;
+                const bounceAnimation = () => {
+                    textMesh.position.y += Math.sin(Date.now() * 0.002) * bounceSpeed;
+                    textMesh.position.x += Math.cos(Date.now() * 0.002) * bounceSpeed;
+                    textMesh.lookAt(textCamera.position);
+                    requestAnimationFrame(bounceAnimation);
+                };
+                bounceAnimation();
+
+                setTimeout(() => {
+                    textScene.remove(textMesh);
+                }, 3000);
+            }
+
+            function createRandomTexts() {
+                const numTexts = Math.floor(Math.random() * 8) + 3;
+                for (let i = 0; i < numTexts; i++) {
+                    createRandomText();
+                }
+            }
+
+            setInterval(createRandomTexts, 300);
+        });
+
+        // Animation loop for the 3D ASCII text
+        function animateText() {
+            requestAnimationFrame(animateText);
+
+            const radius = 5.5;
+            const angle = Date.now() * 0.0005;
+            textCamera.position.x = Math.sin(angle) * radius;
+            textCamera.position.z = Math.cos(angle) * radius;
+            textCamera.lookAt(textScene.position);
+
+            textRenderer.render(textScene, textCamera);
+        }
+
+        animateText();
+    </script>
+</body>
+</html>

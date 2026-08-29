@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>RawmWare.Com - Data Tracker v1.1</title>
+    <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+
+        .code-window {
+            width: 1200px;
+            height: 900px;
+            background-color: #000000;
+            border: 6px solid #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            pointer-events: none;
+            position: relative;
+            max-width: 95vw;
+            max-height: 95vh;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+
+        .window-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background-color: #000000;
+            border-bottom: 3px solid #FFFFFF;
+            min-height: 50px;
+        }
+
+
+        .window-title {
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #FFFFFF;
+            font-family: 'Times New Roman', serif;
+        }
+
+
+        .canvas-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+            background-color: #000000;
+            border-top: 1px solid #FFFFFF;
+            border-bottom: 1px solid #FFFFFF;
+            padding: 15px;
+            min-height: 0;
+            position: relative;
+            align-items: center;
+        }
+
+
+        .canvas-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+
+        #tracking-canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+
+        .coordinate-display {
+            font-family: monospace;
+            color: #FFFFFF;
+            font-size: 14px;
+            line-height: 1.6;
+            height: fit-content;
+            align-self: center;
+        }
+
+
+        @media (max-width: 768px) {
+            .code-window {
+                width: 95vw;
+                height: 95vw;
+                max-height: 95vh;
+            }
+           
+            .window-title {
+                font-size: 0.8em;
+            }
+           
+            .canvas-container {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+           
+            .coordinate-display {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="code-window">
+        <div class="window-header">
+            <div class="window-title">RawmWare.Com - Data Tracker v1.1</div>
+        </div>
+        <div class="canvas-container">
+            <div class="coordinate-display" id="coordinate-display"></div>
+            <div class="canvas-wrapper">
+                <canvas id="tracking-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        function setup3DTracking() {
+            const canvas = document.getElementById('tracking-canvas');
+            const ctx = canvas.getContext('2d');
+            const coordDisplay = document.getElementById('coordinate-display');
+
+
+            // 3D tracking points system
+            let trackingPoints = [];
+            let pointIdCounter = 0;
+            let time = 0;
+            let frameCount = 0;
+            let lastSpawnTime = Date.now();
+            
+            // 3D Camera system for dynamic depth and cinematic movement
+            let camera = {
+                x: 0,
+                y: 0,
+                z: 3,
+                targetX: 0,
+                targetY: 0,
+                targetZ: 0,
+                fov: 60,
+                rotationX: 0,
+                rotationY: 0,
+                rotationZ: 0,
+                distance: 1.0,  // Zoomed in much closer for better visibility
+                orbitSpeed: 0.0003,
+                zoomSpeed: 0.0002,
+                tiltSpeed: 0.0001
+            };
+           
+            // Pseudo location database for realistic tracking feel
+            const pseudoLocations = [
+                'Tokyo, Japan', 'Seoul, Korea', 'New York, USA', 'London, UK',
+                'Paris, France', 'Berlin, Germany', 'Moscow, Russia', 'Beijing, China',
+                'Sydney, Australia', 'Mumbai, India', 'São Paulo, Brazil', 'Cairo, Egypt',
+                'Lagos, Nigeria', 'Mexico City, Mexico', 'Toronto, Canada', 'Stockholm, Sweden',
+                'Amsterdam, Netherlands', 'Singapore', 'Hong Kong', 'Dubai, UAE',
+                'Tel Aviv, Israel', 'Bangkok, Thailand', 'Manila, Philippines', 'Jakarta, Indonesia'
+            ];
+
+            // Track currently used locations
+            let usedLocations = new Set();
+            
+            // Check if a new point would overlap with existing points
+            function checkOverlap(x, y, z, existingPoints) {
+                const minDistance = 0.35; // Increased minimum distance between points in 3D space
+                
+                for (let point of existingPoints) {
+                    const dx = point.x - x;
+                    const dy = point.y - y;
+                    const dz = point.z - z;
+                    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                    
+                    if (distance < minDistance) {
+                        return true; // Overlap detected
+                    }
+                }
+                return false; // No overlap
+            }
+            
+            function generateRandom3DPoint() {
+                // Select a unique location for this tracking point
+                let location;
+                let locationAttempts = 0;
+                const availableLocations = pseudoLocations.filter(loc => !usedLocations.has(loc));
+                
+                if (availableLocations.length > 0) {
+                    location = availableLocations[Math.floor(Math.random() * availableLocations.length)];
+                } else {
+                    // If all locations are used, clear and start fresh
+                    usedLocations.clear();
+                    location = pseudoLocations[Math.floor(Math.random() * pseudoLocations.length)];
+                }
+                
+                // Add location to used set
+                usedLocations.add(location);
+                
+                // Generate position with collision detection and better spread
+                let x, y, z;
+                let attempts = 0;
+                const maxAttempts = 100; // More attempts for better placement
+                
+                do {
+                    // Even more spread to prevent clustering
+                    x = Math.random() * 0.7 + 0.15;  // Horizontal spread (0.15 to 0.85)
+                    y = Math.random() * 0.8 + 0.1;   // Vertical spread (0.1 to 0.9)
+                    z = Math.random() * 0.5 + 0.25;  // Depth spread (0.25 to 0.75)
+                    attempts++;
+                } while (checkOverlap(x, y, z, trackingPoints) && attempts < maxAttempts);
+               
+                return {
+                    x: x,
+                    y: y,
+                    z: z,
+                    subnetBase: Math.floor(Math.random() * 256), // For subnet animation
+                    subnetMask: [255, Math.floor(Math.random() * 256), Math.floor(Math.random() * 256), 0], // Subnet mask
+                    baseIP: [10, Math.floor(Math.random() * 256), Math.floor(Math.random() * 256), Math.floor(Math.random() * 256)], // Base IP for animation
+                    location: location,
+                    id: pointIdCounter++,
+                    birthTime: Date.now(),
+                    lifespan: Math.random() * 5000 + 3000, // Much longer lifespan (3-8 seconds)
+                    size: Math.random() * 5 + 2,
+                    velocity: {
+                        x: (Math.random() - 0.5) * 0.001,  // Slower movement
+                        y: (Math.random() - 0.5) * 0.0008,  // Even slower vertical movement  
+                        z: (Math.random() - 0.5) * 0.001   // Slower depth movement
+                    },
+                    jitter: {
+                        x: Math.random() * 0.0005,
+                        y: Math.random() * 0.0003,
+                        z: Math.random() * 0.0005
+                    },
+                    trackingType: 'IP',
+                    pulseSpeed: Math.random() * 0.0008 + 0.0008,  // Slower pulsing
+                    scanDirection: Math.random() > 0.5 ? 1 : -1
+                };
+            }
+
+
+            // Start with initial points (1-2 targets for cleaner look)
+            const initialCount = Math.floor(Math.random() * 2) + 1; // 1-2 initial targets
+            for (let i = 0; i < initialCount; i++) {
+                trackingPoints.push(generateRandom3DPoint());
+            }
+
+
+            function resizeCanvas() {
+                const wrapper = document.querySelector('.canvas-wrapper');
+                const wrapperRect = wrapper.getBoundingClientRect();
+                const size = Math.min(wrapperRect.width * 0.95, wrapperRect.height * 0.95);
+                canvas.width = size;
+                canvas.height = size;
+            }
+
+
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+
+            function generateCoordinate(base, variance, time) {
+                const noise = Math.sin(time * 0.0004 + base * 100) * variance;  // Slower coordinate changes
+                const coord = base + noise;
+                return coord.toFixed(6);
+            }
+
+            // Generate animated IP address with subnet
+            function generateAnimatedIP(point, currentTime) {
+                const animationSpeed = 0.003; // Faster IP changes for tactical feel
+                
+                // Use point ID to ensure uniqueness and add rapid time variation
+                const baseOffset = point.id * 37; // Prime number for better distribution
+                const octet1 = point.subnetBase; // Use the stored subnet base
+                const octet2 = Math.floor((Math.sin(currentTime * animationSpeed + baseOffset * 1.1) * 0.5 + 0.5) * 255);
+                const octet3 = Math.floor((Math.sin(currentTime * animationSpeed * 1.7 + baseOffset * 2.3) * 0.5 + 0.5) * 255);
+                const octet4 = Math.floor((Math.sin(currentTime * animationSpeed * 0.9 + baseOffset * 3.7) * 0.5 + 0.5) * 255);
+                
+                return `${octet1}.${octet2}.${octet3}.${octet4}`;
+            }
+            
+
+            // Draw targeting cross - pure white, bold design
+            function draw3DSphere(ctx, centerX, centerY, radius, opacity, sizeMultiplier, currentTime, pointId) {
+                // Draw prominent segmented cross as main targeting element
+                ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`; // Pure white
+                ctx.lineWidth = 3; // Bold lines
+                const crossSize = radius; // Full radius for the cross
+                const gap = crossSize * 0.25; // 25% gap in center for clear separation
+                
+                // Horizontal segments of cross
+                ctx.beginPath();
+                ctx.moveTo(centerX - crossSize, centerY);
+                ctx.lineTo(centerX - gap, centerY);
+                ctx.moveTo(centerX + gap, centerY);
+                ctx.lineTo(centerX + crossSize, centerY);
+                // Vertical segments of cross
+                ctx.moveTo(centerX, centerY - crossSize);
+                ctx.lineTo(centerX, centerY - gap);
+                ctx.moveTo(centerX, centerY + gap);
+                ctx.lineTo(centerX, centerY + crossSize);
+                ctx.stroke();
+                
+                // Add corner brackets for targeting aesthetic
+                const bracketSize = radius * 0.3;
+                const bracketLength = radius * 0.2;
+                ctx.lineWidth = 2;
+                
+                // Top-left bracket
+                ctx.beginPath();
+                ctx.moveTo(centerX - bracketSize, centerY - bracketSize);
+                ctx.lineTo(centerX - bracketSize + bracketLength, centerY - bracketSize);
+                ctx.moveTo(centerX - bracketSize, centerY - bracketSize);
+                ctx.lineTo(centerX - bracketSize, centerY - bracketSize + bracketLength);
+                
+                // Top-right bracket
+                ctx.moveTo(centerX + bracketSize, centerY - bracketSize);
+                ctx.lineTo(centerX + bracketSize - bracketLength, centerY - bracketSize);
+                ctx.moveTo(centerX + bracketSize, centerY - bracketSize);
+                ctx.lineTo(centerX + bracketSize, centerY - bracketSize + bracketLength);
+                
+                // Bottom-left bracket
+                ctx.moveTo(centerX - bracketSize, centerY + bracketSize);
+                ctx.lineTo(centerX - bracketSize + bracketLength, centerY + bracketSize);
+                ctx.moveTo(centerX - bracketSize, centerY + bracketSize);
+                ctx.lineTo(centerX - bracketSize, centerY + bracketSize - bracketLength);
+                
+                // Bottom-right bracket
+                ctx.moveTo(centerX + bracketSize, centerY + bracketSize);
+                ctx.lineTo(centerX + bracketSize - bracketLength, centerY + bracketSize);
+                ctx.moveTo(centerX + bracketSize, centerY + bracketSize);
+                ctx.lineTo(centerX + bracketSize, centerY + bracketSize - bracketLength);
+                
+                ctx.stroke();
+            }
+
+
+            // Helper function for animated subnet - declare before use
+            function generateAnimatedSubnet(point, currentTime) {
+                const animationSpeed = 0.002; // Animation speed for subnet
+                const baseOffset = point.id * 47;
+                
+                // Common subnet mask patterns
+                const octet2 = Math.floor((Math.sin(currentTime * animationSpeed + baseOffset) * 0.5 + 0.5) * 256);
+                const octet3 = Math.floor((Math.sin(currentTime * animationSpeed * 1.3 + baseOffset * 2) * 0.5 + 0.5) * 256);
+                
+                return `255.${octet2}.${octet3}.0`;
+            }
+
+            function updateCoordinateDisplay() {
+                const lines = [];
+                lines.push('3D TRACKING DATA STREAM');
+                lines.push('======================');
+                lines.push(`FRAME: ${frameCount.toString().padStart(6, '0')}`);
+                lines.push(`TIME: ${(time * 0.001).toFixed(3)}s`);
+                lines.push(`ACTIVE NODES: ${trackingPoints.length}`);
+                lines.push('');
+               
+                trackingPoints.slice(0, 6).forEach((point, i) => {
+                    // Generate animated IP address and subnet
+                    const animatedIP = generateAnimatedIP(point, time);
+                    const animatedSubnet = generateAnimatedSubnet(point, time);
+                    lines.push(`IP: ${animatedIP}`);
+                    lines.push(`SUBNET: ${animatedSubnet}`);
+                    lines.push(`LOC: ${point.location}`);
+                    lines.push(`STATUS: ACTIVE`);
+                    lines.push('');
+                });
+               
+                lines.push('');
+                lines.push('STATUS: TRACKING 3D SPACE');
+                lines.push(`CAM: ${camera.distance.toFixed(2)}m`);
+                lines.push(`ANGLE: ${(camera.rotationY * 180 / Math.PI % 360).toFixed(1)}°`);
+               
+                coordDisplay.innerHTML = lines.join('<br>');
+            }
+
+
+            // Update camera position for dynamic 3D movement
+            function updateCamera(currentTime) {
+                // Orbital movement around the tracking space
+                camera.rotationY += camera.orbitSpeed;
+                camera.rotationX = Math.sin(currentTime * camera.tiltSpeed) * 0.3; // Gentle up/down tilt
+                
+                // Dynamic zoom that breathes in and out (much closer view)
+                camera.distance = 1.0 + Math.sin(currentTime * camera.zoomSpeed) * 0.3;
+                
+                // Calculate camera position in 3D space
+                camera.x = Math.sin(camera.rotationY) * camera.distance;
+                camera.z = Math.cos(camera.rotationY) * camera.distance;
+                camera.y = Math.sin(camera.rotationX) * 0.5;
+            }
+
+            function project3DTo2D(point3D) {
+                const centerX = canvas.width * 0.3;  // Shifted left to make room for text
+                const centerY = canvas.height / 2;
+                
+                // Transform point relative to camera position
+                let x = point3D.x - 0.5 - camera.targetX;
+                let y = point3D.y - 0.5 - camera.targetY;
+                let z = point3D.z - 0.5 - camera.targetZ;
+                
+                // Apply camera rotation (Y-axis orbital rotation)
+                const cosY = Math.cos(-camera.rotationY);
+                const sinY = Math.sin(-camera.rotationY);
+                const rotatedX = x * cosY - z * sinY;
+                const rotatedZ = x * sinY + z * cosY;
+                
+                // Apply camera rotation (X-axis tilt)
+                const cosX = Math.cos(-camera.rotationX);
+                const sinX = Math.sin(-camera.rotationX);
+                const finalY = y * cosX - rotatedZ * sinX;
+                const finalZ = y * sinX + rotatedZ * sinX + camera.distance;
+                
+                // Perspective projection with dynamic FOV
+                const focalLength = 400 + Math.sin(time * 0.0001) * 100; // Subtle focal length variation
+                const scale = focalLength / (focalLength + finalZ * 300);
+                
+                const projectedX = centerX + rotatedX * canvas.width * scale * 0.6;  // Increased horizontal scale
+                const projectedY = centerY + finalY * canvas.height * scale * 1.0;  // Increased vertical scale
+                
+                return {
+                    x: projectedX,
+                    y: projectedY,
+                    scale: Math.max(0.1, scale), // Prevent negative scaling
+                    depth: finalZ
+                };
+            }
+
+
+            function draw3DTrackingPoints() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+               
+                const currentTime = Date.now();
+                
+                // Update camera for dynamic 3D perspective
+                updateCamera(currentTime);
+               
+                // Remove expired points and clean up their locations
+                trackingPoints = trackingPoints.filter(point => {
+                    const isAlive = (currentTime - point.birthTime) < point.lifespan;
+                    if (!isAlive) {
+                        // Remove location from used set when point expires
+                        usedLocations.delete(point.location);
+                    }
+                    return isAlive;
+                });
+               
+                // Controlled spawning for tactical tracking feel
+                const minTargets = 2;
+                const maxTargets = 5; // Maximum 5 targets for more visual density
+                const spawnInterval = 600 + Math.random() * 800;  // 0.6-1.4 second intervals
+               
+                // Always maintain minimum targets
+                if (trackingPoints.length < minTargets) {
+                    trackingPoints.push(generateRandom3DPoint());
+                    lastSpawnTime = currentTime;
+                }
+                // Controlled spawning when below max
+                else if (trackingPoints.length < maxTargets && currentTime - lastSpawnTime > spawnInterval) {
+                    // 60% chance to spawn for controlled population
+                    if (Math.random() > 0.4) {
+                        trackingPoints.push(generateRandom3DPoint());
+                        lastSpawnTime = currentTime;
+                    }
+                }
+               
+                // Update point positions with erratic movement and collision avoidance
+                trackingPoints.forEach((point, index) => {
+                    // Add jitter for erratic movement
+                    const jitterX = (Math.random() - 0.5) * point.jitter.x;
+                    const jitterY = (Math.random() - 0.5) * point.jitter.y;
+                    const jitterZ = (Math.random() - 0.5) * point.jitter.z;
+                    
+                    // Calculate new position
+                    let newX = point.x + point.velocity.x + jitterX;
+                    let newY = point.y + point.velocity.y + jitterY;
+                    let newZ = point.z + point.velocity.z + jitterZ;
+                    
+                    // Check for collisions with other points
+                    const minSeparation = 0.25; // Increased minimum separation during movement
+                    let collision = false;
+                    
+                    trackingPoints.forEach((otherPoint, otherIndex) => {
+                        if (index !== otherIndex) {
+                            const dx = otherPoint.x - newX;
+                            const dy = otherPoint.y - newY;
+                            const dz = otherPoint.z - newZ;
+                            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                            
+                            if (distance < minSeparation) {
+                                collision = true;
+                                // Push away from other point
+                                const pushForce = 0.01;
+                                point.velocity.x = -dx * pushForce;
+                                point.velocity.y = -dy * pushForce;
+                                point.velocity.z = -dz * pushForce;
+                            }
+                        }
+                    });
+                    
+                    // Only update position if no collision or if collision handled
+                    if (!collision) {
+                        point.x = newX;
+                        point.y = newY;
+                        point.z = newZ;
+                    }
+                   
+                    // Boundary checks
+                    if (point.x < 0.1 || point.x > 0.9) point.velocity.x *= -1;  // Wider boundaries
+                    if (point.y < 0.05 || point.y > 0.95) point.velocity.y *= -1;  // Much wider vertical boundaries
+                    if (point.z < 0.2 || point.z > 0.8) point.velocity.z *= -1;  // Depth boundaries
+                   
+                    point.x = Math.max(0.1, Math.min(0.9, point.x));  // Wider boundaries
+                    point.y = Math.max(0.05, Math.min(0.95, point.y));  // Much wider vertical boundaries
+                    point.z = Math.max(0.2, Math.min(0.8, point.z));  // Depth boundaries
+                });
+               
+                const sortedPoints = [...trackingPoints].sort((a, b) => {
+                    const projA = project3DTo2D(a);
+                    const projB = project3DTo2D(b);
+                    return projA.depth - projB.depth;
+                });
+               
+                // Connected lines removed for cleaner VFX tracking display
+                // Keeping only crosshairs and center points
+               
+                // Draw tracking points - only if they're visible in viewport
+                sortedPoints.forEach((point, index) => {
+                    const projected = project3DTo2D(point);
+                    const x = projected.x;
+                    const y = projected.y;
+                    const scale = projected.scale;
+                    
+                    // Skip if target is outside viewport (with text space buffer)
+                    if (x < -50 || x > canvas.width - 200 || y < -50 || y > canvas.height + 50) {
+                        return;
+                    }
+                   
+                    const opacity = 0.5 + scale * 0.5;
+                    const sizeMultiplier = scale;
+                    
+                    const offsetX = Math.sin(time * 0.0003 + point.id * 0.5) * 5 * scale;  // Much slower floating motion
+                    const offsetY = Math.cos(time * 0.0003 + point.id * 0.7) * 5 * scale;  // Much slower floating motion
+                   
+                    const finalX = x + offsetX;
+                    const finalY = y + offsetY;
+                   
+                    // Size for the targeting cross
+                    const crossRadius = 30 * scale;  // Size for the cross
+                    
+                    // Draw the targeting cross
+                    draw3DSphere(ctx, finalX, finalY, crossRadius, opacity, sizeMultiplier, time, point.id);
+                   
+                    // Generate animated IP and subnet, static location
+                    const animatedIP = generateAnimatedIP(point, time);
+                    const animatedSubnet = generateAnimatedSubnet(point, time);
+                    const staticLocation = point.location; // Use static location
+                    
+                    // Calculate text position - dynamic positioning based on scale with more spacing
+                    const textStartX = finalX + crossRadius + 80;  // More space from cross
+                    const textIP_Y = finalY - 25;  // IP position
+                    const textSubnet_Y = finalY;     // Subnet position
+                    const textLoc_Y = finalY + 25;   // Location position
+                    
+                    // Draw connection line from sphere edge to text - pure white
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+                    ctx.lineWidth = 2; // Thicker line
+                    
+                    // Calculate connection point on cross edge (right side)
+                    const connectionX = finalX + crossRadius;
+                    const connectionY = finalY;
+                    
+                    // Draw connection line (horizontal from sphere to text area)
+                    ctx.beginPath();
+                    ctx.moveTo(connectionX, connectionY);
+                    ctx.lineTo(textStartX - 20, connectionY);  // Shorter line
+                    ctx.stroke();
+                    
+                    // Draw bracket-style connectors to text
+                    ctx.beginPath();
+                    // Top bracket for IP
+                    ctx.moveTo(textStartX - 20, connectionY);
+                    ctx.lineTo(textStartX - 20, textIP_Y);
+                    ctx.lineTo(textStartX - 10, textIP_Y);
+                    // Middle bracket for subnet
+                    ctx.moveTo(textStartX - 20, connectionY);
+                    ctx.lineTo(textStartX - 20, textSubnet_Y);
+                    ctx.lineTo(textStartX - 10, textSubnet_Y);
+                    // Bottom bracket for location  
+                    ctx.moveTo(textStartX - 20, connectionY);
+                    ctx.lineTo(textStartX - 20, textLoc_Y);
+                    ctx.lineTo(textStartX - 10, textLoc_Y);
+                    ctx.stroke();
+                    
+                    // Draw the text labels - larger, pure white
+                    ctx.font = 'bold 14px monospace';  // Larger, bold font
+                    ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`; // Pure white
+                    ctx.fillText('IP: ' + animatedIP, textStartX, textIP_Y);
+                    ctx.fillText('SUBNET: ' + animatedSubnet, textStartX, textSubnet_Y);
+                    ctx.font = 'bold 13px monospace';  // Slightly smaller for location
+                    ctx.fillText('LOC: ' + staticLocation, textStartX, textLoc_Y); // Static location
+                });
+            }
+
+
+            function animate() {
+                time = Date.now();
+                frameCount++;
+               
+                draw3DTrackingPoints();
+                updateCoordinateDisplay();
+               
+                requestAnimationFrame(animate);
+            }
+
+
+            animate();
+        }
+
+
+        window.addEventListener('load', setup3DTracking);
+    </script>
+</body>
+</html>

@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>TACTICAL OPERATIONS INTERFACE</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @font-face {
+            font-family: 'Military';
+            src: local('Consolas'), local('Courier New'), local('monospace');
+        }
+
+        body {
+            background: #000000;
+            color: #FFFFFF;
+            font-family: 'Military', 'Consolas', monospace;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .main-container {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            grid-template-rows: 80px 1fr 1fr 60px;
+            gap: 2px;
+            padding: 10px;
+            background: #000000;
+        }
+
+        .panel {
+            border: 1px solid #FFFFFF;
+            background: #000000;
+            position: relative;
+            overflow: hidden;
+            padding: 10px;
+        }
+
+        .panel-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 25px;
+            border-bottom: 1px solid #FFFFFF;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 10px;
+            letter-spacing: 2px;
+            background: #000000;
+            z-index: 10;
+        }
+
+        .panel-content {
+            margin-top: 30px;
+            height: calc(100% - 30px);
+            position: relative;
+        }
+
+        /* Header Panel */
+        .header-panel {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-size: 18px;
+            letter-spacing: 4px;
+            border: 2px solid #FFFFFF;
+        }
+
+        /* Footer Panel */
+        .footer-panel {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            font-size: 10px;
+            letter-spacing: 1px;
+            border: 1px solid #FFFFFF;
+        }
+
+        /* Radar Display */
+        .radar-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        #radarCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Target Tracking */
+        #targetCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Data Matrix */
+        .matrix-container {
+            font-family: monospace;
+            font-size: 10px;
+            line-height: 1.2;
+            overflow: hidden;
+            height: 100%;
+            position: relative;
+        }
+
+        .matrix-line {
+            white-space: nowrap;
+            opacity: 0.8;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 0.8; transform: translateY(0); }
+        }
+
+        /* Waveform */
+        #waveformCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Grid Overlay */
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                repeating-linear-gradient(0deg, 
+                    transparent, 
+                    transparent 19px, 
+                    rgba(255,255,255,0.05) 19px, 
+                    rgba(255,255,255,0.05) 20px),
+                repeating-linear-gradient(90deg, 
+                    transparent, 
+                    transparent 19px, 
+                    rgba(255,255,255,0.05) 19px, 
+                    rgba(255,255,255,0.05) 20px);
+            pointer-events: none;
+        }
+
+        /* Telemetry Display */
+        .telemetry {
+            font-size: 11px;
+            line-height: 1.8;
+        }
+
+        .telemetry-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* Blinking elements */
+        .blink {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border: 1px solid #FFFFFF;
+            margin-right: 5px;
+        }
+
+        .status-active {
+            background: #FFFFFF;
+        }
+
+        /* Crosshair reticle */
+        .reticle {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border: 1px solid #FFFFFF;
+            pointer-events: none;
+        }
+
+        .reticle::before,
+        .reticle::after {
+            content: '';
+            position: absolute;
+            background: #FFFFFF;
+        }
+
+        .reticle::before {
+            width: 1px;
+            height: 20px;
+            left: 50%;
+            top: -10px;
+            transform: translateX(-50%);
+        }
+
+        .reticle::after {
+            width: 20px;
+            height: 1px;
+            top: 50%;
+            left: -10px;
+            transform: translateY(-50%);
+        }
+
+        /* Corner brackets */
+        .corner-bracket {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            border: 1px solid #FFFFFF;
+        }
+
+        .corner-bracket.tl {
+            top: 0;
+            left: 0;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .corner-bracket.tr {
+            top: 0;
+            right: 0;
+            border-left: none;
+            border-bottom: none;
+        }
+
+        .corner-bracket.bl {
+            bottom: 0;
+            left: 0;
+            border-right: none;
+            border-top: none;
+        }
+
+        .corner-bracket.br {
+            bottom: 0;
+            right: 0;
+            border-left: none;
+            border-top: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="panel header-panel">
+            <div>
+                <span class="status-indicator status-active"></span>
+                TACTICAL OPERATIONS INTERFACE v4.2.1
+            </div>
+            <div id="systemTime">SYSTEM TIME: --:--:--</div>
+            <div>
+                STATUS: <span class="blink">ACTIVE</span>
+            </div>
+        </div>
+
+        <!-- Left Column -->
+        <div class="panel">
+            <div class="panel-header">RADAR SCAN [SECTOR 7-A]</div>
+            <div class="panel-content">
+                <div class="radar-container">
+                    <canvas id="radarCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Top -->
+        <div class="panel">
+            <div class="panel-header">TARGET ACQUISITION</div>
+            <div class="panel-content">
+                <canvas id="targetCanvas"></canvas>
+                <div class="grid-overlay"></div>
+            </div>
+        </div>
+
+        <!-- Right Top -->
+        <div class="panel">
+            <div class="panel-header">SIGNAL ANALYSIS</div>
+            <div class="panel-content">
+                <canvas id="waveformCanvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Left Bottom -->
+        <div class="panel">
+            <div class="panel-header">DATA STREAM</div>
+            <div class="panel-content">
+                <div class="matrix-container" id="matrixContainer"></div>
+            </div>
+        </div>
+
+        <!-- Center Bottom -->
+        <div class="panel">
+            <div class="panel-header">TELEMETRY</div>
+            <div class="panel-content">
+                <div class="telemetry" id="telemetryDisplay"></div>
+            </div>
+        </div>
+
+        <!-- Right Bottom -->
+        <div class="panel">
+            <div class="panel-header">SYSTEM DIAGNOSTICS</div>
+            <div class="panel-content" id="diagnosticsDisplay"></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="panel footer-panel">
+            <div>ENCRYPTION: AES-256</div>
+            <div>SIGNAL: <span id="signalStrength">98.7</span>%</div>
+            <div>BANDWIDTH: <span id="bandwidth">1.2</span> GB/s</div>
+            <div>TARGETS: <span id="targetCount">0</span></div>
+            <div>ALERTS: <span class="blink" id="alertCount">0</span></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize all systems
+        let frameCount = 0;
+        let targets = [];
+        let radarAngle = 0;
+        let matrixData = [];
+        let waveformData = new Array(100).fill(0);
+
+        // System Time
+        function updateSystemTime() {
+            const now = new Date();
+            const time = now.toTimeString().split(' ')[0];
+            document.getElementById('systemTime').textContent = `SYSTEM TIME: ${time}`;
+        }
+
+        // Radar System
+        function initRadar() {
+            const canvas = document.getElementById('radarCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            function resizeCanvas() {
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+            }
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            function drawRadar() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const radius = Math.min(centerX, centerY) - 20;
+
+                // Draw circles
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 1;
+                
+                for (let i = 1; i <= 4; i++) {
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, radius * i / 4, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // Draw cross lines
+                ctx.beginPath();
+                ctx.moveTo(centerX - radius, centerY);
+                ctx.lineTo(centerX + radius, centerY);
+                ctx.moveTo(centerX, centerY - radius);
+                ctx.lineTo(centerX, centerY + radius);
+                ctx.stroke();
+
+                // Draw sweep line
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                const sweepX = centerX + Math.cos(radarAngle) * radius;
+                const sweepY = centerY + Math.sin(radarAngle) * radius;
+                ctx.lineTo(sweepX, sweepY);
+                ctx.stroke();
+
+                // Draw sweep trail
+                for (let i = 1; i <= 10; i++) {
+                    const trailAngle = radarAngle - (i * 0.1);
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${0.8 - i * 0.08})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    const trailX = centerX + Math.cos(trailAngle) * radius;
+                    const trailY = centerY + Math.sin(trailAngle) * radius;
+                    ctx.lineTo(trailX, trailY);
+                    ctx.stroke();
+                }
+
+                // Draw blips
+                targets.forEach(target => {
+                    if (target.active) {
+                        const blipX = centerX + target.x * radius;
+                        const blipY = centerY + target.y * radius;
+                        
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.beginPath();
+                        ctx.arc(blipX, blipY, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Target ID
+                        ctx.font = '8px monospace';
+                        ctx.fillText(`T${target.id}`, blipX + 5, blipY - 5);
+                    }
+                });
+
+                radarAngle += 0.02;
+                if (radarAngle > Math.PI * 2) radarAngle = 0;
+            }
+
+            return drawRadar;
+        }
+
+        // Target Tracking System
+        function initTargetTracking() {
+            const canvas = document.getElementById('targetCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            function resizeCanvas() {
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+            }
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            let trackingPoints = [];
+            
+            // Generate tracking points
+            for (let i = 0; i < 5; i++) {
+                trackingPoints.push({
+                    x: Math.random(),
+                    y: Math.random(),
+                    vx: (Math.random() - 0.5) * 0.002,
+                    vy: (Math.random() - 0.5) * 0.002,
+                    id: i + 1,
+                    locked: Math.random() > 0.5
+                });
+            }
+
+            function drawTargetTracking() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Update positions
+                trackingPoints.forEach(point => {
+                    point.x += point.vx;
+                    point.y += point.vy;
+                    
+                    if (point.x < 0.1 || point.x > 0.9) point.vx *= -1;
+                    if (point.y < 0.1 || point.y > 0.9) point.vy *= -1;
+                    
+                    point.x = Math.max(0.1, Math.min(0.9, point.x));
+                    point.y = Math.max(0.1, Math.min(0.9, point.y));
+                });
+
+                // Draw tracking boxes
+                trackingPoints.forEach(point => {
+                    const x = point.x * canvas.width;
+                    const y = point.y * canvas.height;
+                    const size = 40;
+                    
+                    ctx.strokeStyle = point.locked ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)';
+                    ctx.lineWidth = point.locked ? 2 : 1;
+                    
+                    // Draw corner brackets
+                    const cornerLength = 10;
+                    
+                    // Top-left
+                    ctx.beginPath();
+                    ctx.moveTo(x - size, y - size + cornerLength);
+                    ctx.lineTo(x - size, y - size);
+                    ctx.lineTo(x - size + cornerLength, y - size);
+                    ctx.stroke();
+                    
+                    // Top-right
+                    ctx.beginPath();
+                    ctx.moveTo(x + size - cornerLength, y - size);
+                    ctx.lineTo(x + size, y - size);
+                    ctx.lineTo(x + size, y - size + cornerLength);
+                    ctx.stroke();
+                    
+                    // Bottom-left
+                    ctx.beginPath();
+                    ctx.moveTo(x - size, y + size - cornerLength);
+                    ctx.lineTo(x - size, y + size);
+                    ctx.lineTo(x - size + cornerLength, y + size);
+                    ctx.stroke();
+                    
+                    // Bottom-right
+                    ctx.beginPath();
+                    ctx.moveTo(x + size - cornerLength, y + size);
+                    ctx.lineTo(x + size, y + size);
+                    ctx.lineTo(x + size, y + size - cornerLength);
+                    ctx.stroke();
+                    
+                    // Center crosshair
+                    if (point.locked) {
+                        ctx.beginPath();
+                        ctx.moveTo(x - 10, y);
+                        ctx.lineTo(x + 10, y);
+                        ctx.moveTo(x, y - 10);
+                        ctx.lineTo(x, y + 10);
+                        ctx.stroke();
+                    }
+                    
+                    // ID and coordinates
+                    ctx.font = '10px monospace';
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillText(`TGT_${point.id}`, x + size + 5, y - size);
+                    ctx.fillText(`[${(point.x).toFixed(3)}, ${(point.y).toFixed(3)}]`, x + size + 5, y - size + 12);
+                    
+                    if (point.locked) {
+                        ctx.fillText('LOCKED', x + size + 5, y - size + 24);
+                    }
+                });
+            }
+
+            return drawTargetTracking;
+        }
+
+        // Waveform Analyzer
+        function initWaveform() {
+            const canvas = document.getElementById('waveformCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            function resizeCanvas() {
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+            }
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            function drawWaveform() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Update waveform data
+                waveformData.shift();
+                waveformData.push(Math.sin(frameCount * 0.1) * 0.5 + Math.random() * 0.3 - 0.15);
+                
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                
+                const spacing = canvas.width / waveformData.length;
+                const centerY = canvas.height / 2;
+                const amplitude = canvas.height * 0.4;
+                
+                waveformData.forEach((value, i) => {
+                    const x = i * spacing;
+                    const y = centerY + value * amplitude;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                
+                ctx.stroke();
+                
+                // Draw grid lines
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 0.5;
+                
+                // Horizontal lines
+                for (let i = 0; i <= 4; i++) {
+                    const y = (canvas.height / 4) * i;
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+                
+                // Draw frequency bars
+                ctx.fillStyle = '#FFFFFF';
+                const barCount = 20;
+                const barWidth = canvas.width / barCount / 2;
+                
+                for (let i = 0; i < barCount; i++) {
+                    const height = Math.abs(Math.sin(frameCount * 0.05 + i * 0.5)) * canvas.height * 0.3;
+                    const x = i * (canvas.width / barCount);
+                    ctx.fillRect(x, canvas.height - height, barWidth, height);
+                }
+            }
+
+            return drawWaveform;
+        }
+
+        // Data Matrix
+        function initMatrix() {
+            const container = document.getElementById('matrixContainer');
+            
+            function generateMatrixLine() {
+                const types = ['0x', 'BIN:', 'HEX:', 'DATA:', 'SCAN:'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                let content = type + ' ';
+                
+                for (let i = 0; i < 20; i++) {
+                    if (type === 'BIN:') {
+                        content += Math.random() > 0.5 ? '1' : '0';
+                    } else {
+                        content += Math.floor(Math.random() * 16).toString(16).toUpperCase();
+                    }
+                    if (i % 4 === 3) content += ' ';
+                }
+                
+                return content;
+            }
+            
+            function updateMatrix() {
+                const line = document.createElement('div');
+                line.className = 'matrix-line';
+                line.textContent = generateMatrixLine();
+                container.appendChild(line);
+                
+                // Keep only last 20 lines
+                while (container.children.length > 20) {
+                    container.removeChild(container.firstChild);
+                }
+            }
+            
+            return updateMatrix;
+        }
+
+        // Telemetry System
+        function initTelemetry() {
+            const display = document.getElementById('telemetryDisplay');
+            
+            function updateTelemetry() {
+                const data = [
+                    { label: 'ALTITUDE', value: `${(Math.random() * 10000 + 5000).toFixed(0)} m` },
+                    { label: 'VELOCITY', value: `${(Math.random() * 500 + 200).toFixed(1)} m/s` },
+                    { label: 'HEADING', value: `${(Math.random() * 360).toFixed(1)}°` },
+                    { label: 'PITCH', value: `${(Math.random() * 60 - 30).toFixed(2)}°` },
+                    { label: 'ROLL', value: `${(Math.random() * 60 - 30).toFixed(2)}°` },
+                    { label: 'YAW', value: `${(Math.random() * 60 - 30).toFixed(2)}°` },
+                    { label: 'G-FORCE', value: `${(Math.random() * 2 + 0.5).toFixed(2)} G` },
+                    { label: 'FUEL', value: `${(Math.random() * 100).toFixed(1)}%` },
+                    { label: 'TEMP', value: `${(Math.random() * 50 + 20).toFixed(1)}°C` },
+                    { label: 'PRESSURE', value: `${(Math.random() * 200 + 900).toFixed(0)} hPa` }
+                ];
+                
+                display.innerHTML = data.map(item => `
+                    <div class="telemetry-item">
+                        <span>${item.label}:</span>
+                        <span>${item.value}</span>
+                    </div>
+                `).join('');
+            }
+            
+            return updateTelemetry;
+        }
+
+        // Diagnostics System
+        function initDiagnostics() {
+            const display = document.getElementById('diagnosticsDisplay');
+            
+            function updateDiagnostics() {
+                const systems = [
+                    { name: 'RADAR', status: Math.random() > 0.1 },
+                    { name: 'TRACKING', status: Math.random() > 0.1 },
+                    { name: 'COMMS', status: Math.random() > 0.05 },
+                    { name: 'WEAPONS', status: Math.random() > 0.2 },
+                    { name: 'SHIELDS', status: Math.random() > 0.15 },
+                    { name: 'ENGINE', status: Math.random() > 0.1 },
+                    { name: 'NAVIGATION', status: Math.random() > 0.05 },
+                    { name: 'SENSORS', status: Math.random() > 0.1 }
+                ];
+                
+                display.innerHTML = systems.map(sys => `
+                    <div style="padding: 4px 0; font-size: 11px;">
+                        <span class="status-indicator ${sys.status ? 'status-active' : ''}"></span>
+                        ${sys.name}: ${sys.status ? 'ONLINE' : '<span class="blink">OFFLINE</span>'}
+                    </div>
+                `).join('');
+            }
+            
+            return updateDiagnostics;
+        }
+
+        // Initialize targets
+        function generateTargets() {
+            targets = [];
+            for (let i = 0; i < 5; i++) {
+                targets.push({
+                    id: i + 1,
+                    x: (Math.random() - 0.5) * 0.8,
+                    y: (Math.random() - 0.5) * 0.8,
+                    active: Math.random() > 0.3
+                });
+            }
+            document.getElementById('targetCount').textContent = targets.filter(t => t.active).length;
+        }
+
+        // Update footer stats
+        function updateStats() {
+            document.getElementById('signalStrength').textContent = (95 + Math.random() * 5).toFixed(1);
+            document.getElementById('bandwidth').textContent = (1 + Math.random() * 0.5).toFixed(2);
+            document.getElementById('alertCount').textContent = Math.floor(Math.random() * 3);
+        }
+
+        // Main animation loop
+        const drawRadar = initRadar();
+        const drawTargetTracking = initTargetTracking();
+        const drawWaveform = initWaveform();
+        const updateMatrix = initMatrix();
+        const updateTelemetry = initTelemetry();
+        const updateDiagnostics = initDiagnostics();
+
+        generateTargets();
+
+        function animate() {
+            frameCount++;
+            
+            drawRadar();
+            drawTargetTracking();
+            drawWaveform();
+            
+            if (frameCount % 5 === 0) {
+                updateMatrix();
+            }
+            
+            if (frameCount % 30 === 0) {
+                updateTelemetry();
+                updateDiagnostics();
+                updateStats();
+            }
+            
+            if (frameCount % 180 === 0) {
+                generateTargets();
+            }
+            
+            requestAnimationFrame(animate);
+        }
+
+        // Start systems
+        setInterval(updateSystemTime, 1000);
+        updateSystemTime();
+        animate();
+    </script>
+</body>
+</html>

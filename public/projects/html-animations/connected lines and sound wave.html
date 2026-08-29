@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            background: black;
+            overflow: hidden;
+            position: fixed;
+        }
+        canvas {
+            display: block;
+        }
+
+
+
+
+        /* Add these new styles for the RawmWare window */
+        .control-window {
+            position: fixed;
+            width: 200px;
+padding: 3px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 3px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(255, 255, 255, 0.3);
+            z-index: 1000;
+            overflow: hidden;
+            top: 20px;
+            right: 10px;
+        }
+
+
+
+
+        .title-bar {
+            background: linear-gradient(to bottom, #000000, #1a1a1a);
+            padding: 0px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: move;
+            user-select: none;
+            color: #fff;
+            border-bottom: 0px solid #fff;
+        }
+
+
+
+
+        .title {
+            flex-grow: 1;
+            font-size: 12px;
+            padding-left: 5px;
+            font-family: 'Tahoma', sans-serif;
+        }
+
+
+
+
+        .buttons {
+            display: flex;
+        }
+
+
+
+
+        .window-button {
+            width: 20px;
+            height: 20px;
+            margin-left: 5px;
+            border: 1px solid #fff;
+            background: #000;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #fff;
+            transition: background 0.3s;
+        }
+
+
+
+
+        .window-content {
+            padding: 0px;
+            color: #fff;
+            font-family: 'Tahoma', sans-serif;
+            font-size: 12px;
+            overflow-y: auto;
+            max-height: 100px;
+        }
+
+
+
+
+        .toolbar {
+            background: linear-gradient(to bottom, #000000, #1a1a1a);
+            padding: 5px;
+            border-top: 1px solid #a9a9a9;
+            text-align: center;
+            display: flex;
+            justify-content: space-around;
+        }
+
+
+
+
+        .toolbar-button {
+            background: #888;
+            padding: 5px 10px;
+            border-radius: 4px;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 10px;
+            animation: hoverAnimation 4s linear infinite alternate;
+        }
+
+
+
+
+        @keyframes hoverAnimation {
+            0% { background: #888; }
+            50% { background: #555; }
+            100% { background: #888; }
+        }
+
+
+
+
+        /* Add mobile-specific styles */
+        @media screen and (max-width: 600px) {
+            .control-window {
+                width: 150px;  /* Smaller width on mobile */
+                top: 10px;
+                right: 5px;
+            }
+           
+            .window-button {
+                width: 16px;   /* Smaller buttons */
+                height: 16px;
+                font-size: 10px;
+            }
+           
+            .toolbar-button {
+                padding: 3px 6px;
+                font-size: 8px;
+            }
+           
+            .title {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+<script>
+let numbers = [];
+let boundaryWidth = 300;
+let boundaryHeight = 400;
+let boundaryX, boundaryY;
+let nextSpawnTime = 10;  // Track when to spawn next box
+let spawnInterval = 10;  // Changed from 2000 to 500 milliseconds
+let myFont;
+
+
+
+
+function setup() {
+    createCanvas(windowWidth, windowHeight);
+   
+    boundaryX = (windowWidth - boundaryWidth) / 2;
+    boundaryY = (windowHeight - boundaryHeight) / 2;
+   
+    strokeWeight(.5);
+    textSize(15);
+    textAlign(CENTER, CENTER);
+    textFont('Times New Roman'); // Set the basic font
+    textStyle(ITALIC);  // Make it italic
+   
+    // Start with minimum number of boxes
+    createNewBox(10);
+}
+
+
+
+
+function createNewBox(count = 1) {
+    for (let i = 0; i < count; i++) {
+        // Adjust speeds and sizes for mobile
+        const speedMultiplier = windowWidth < 600 ? 1.5 : 2.5;
+        const circleSize = windowWidth < 600 ? 30 : 40;
+       
+        numbers.push({
+            pos: createVector(
+                random(boundaryX + circleSize/2, boundaryX + boundaryWidth - circleSize/2),
+                random(boundaryY + circleSize/2, boundaryY + boundaryHeight - circleSize/2)
+            ),
+            vel: p5.Vector.random2D().mult(speedMultiplier),
+            value: floor(random(100, 360)),
+            bounds: { w: circleSize, h: circleSize/2 }
+        });
+    }
+}
+
+
+
+
+function draw() {
+    background(0);
+   
+    // Check if we should add or remove boxes
+    if (millis() > nextSpawnTime) {
+        let targetCount = floor(random(10, 21));
+        let currentCount = numbers.length;
+       
+        if (currentCount < targetCount) {
+            createNewBox(1);
+        } else if (currentCount > targetCount) {
+            numbers.pop();
+        }
+       
+        nextSpawnTime = millis() + spawnInterval;
+    }
+   
+    for (let num of numbers) {
+        // Update position
+        num.pos.add(num.vel);
+       
+        // Bounce off boundary edges
+        if (num.pos.x < boundaryX + num.bounds.w/2 ||
+            num.pos.x > boundaryX + boundaryWidth - num.bounds.w/2) {
+            num.vel.x *= -1;
+            num.pos.x = constrain(
+                num.pos.x,
+                boundaryX + num.bounds.w/2,
+                boundaryX + boundaryWidth - num.bounds.w/2
+            );
+        }
+        if (num.pos.y < boundaryY + num.bounds.h/2 ||
+            num.pos.y > boundaryY + boundaryHeight - num.bounds.h/2) {
+            num.vel.y *= -1;
+            num.pos.y = constrain(
+                num.pos.y,
+                boundaryY + num.bounds.h/2,
+                boundaryY + boundaryHeight - num.bounds.h/2
+            );
+        }
+       
+        // Decrease the value
+        num.value = (num.value <= 0) ? 359 : num.value - 0.5;
+       
+        // Draw circle instead of rectangle
+        noFill();
+        stroke(255);
+        circle(num.pos.x, num.pos.y,40); // Adjust the size (60) as needed
+       
+        // Draw the number
+        fill(255);
+        noStroke();
+        text(floor(num.value) + "°", num.pos.x, num.pos.y);
+       
+        // Draw connections
+        for (let num2 of numbers) {
+            if (num2 === num) continue;
+            let d = p5.Vector.dist(num.pos, num2.pos);
+            if (d < 150) {
+                stroke(255, 255 * (1 - d/150));
+                line(num.pos.x, num.pos.y, num2.pos.x, num2.pos.y);
+            }
+        }
+    }
+}
+
+
+
+
+function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+    // Recalculate boundary position on window resize
+    boundaryX = (windowWidth - boundaryWidth) / 2;
+    boundaryY = (windowHeight - boundaryHeight) / 2;
+}
+</script>
+
+
+
+
+<!-- Add this right after your existing script -->
+<div class="control-window" id="waveformWindow">
+    <div class="title-bar">
+        <div class="title"><em><strong>RawmWare.OS</strong></em></div>
+        <div class="buttons">
+            <div class="window-button minimize">_</div>
+            <div class="window-button maximize">□</div>
+            <div class="window-button close">×</div>
+        </div>
+    </div>
+    <div class="window-content">
+        <canvas id="unique-visualizer"></canvas>
+    </div>
+    <div class="toolbar">
+        <div class="toolbar-button">File</div>
+        <div class="toolbar-button">Edit</div>
+        <div class="toolbar-button">View</div>
+        <div class="toolbar-button">Help</div>
+    </div>
+</div>
+
+
+
+
+<script>
+    // Add this after your existing script
+    const canvas = document.getElementById('unique-visualizer');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 200;
+    canvas.height = 40;
+
+
+
+
+    let points = Array(100).fill(canvas.height / 2);
+    function animateWaveform() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        points.shift();
+        points.push(canvas.height / 2 + (Math.random() - 0.4) * 25);
+        ctx.beginPath();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        points.forEach((point, i) => {
+            ctx.lineTo(i * (canvas.width / points.length), point);
+        });
+        ctx.stroke();
+        setTimeout(() => {
+            requestAnimationFrame(animateWaveform);
+        }, 50);
+    }
+    animateWaveform();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+

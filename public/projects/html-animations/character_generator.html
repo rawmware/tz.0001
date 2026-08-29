@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Generator & Paint Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #764ba2;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        canvas {
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            cursor: crosshair;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 25px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(118, 75, 162, 0.4);
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(118, 75, 162, 0.5);
+        }
+
+        .reset-btn {
+            background: #ff6b6b;
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .reset-btn:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+        }
+
+        .download-btn {
+            background: #4ecdc4;
+            color: white;
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
+        }
+
+        .download-btn:hover {
+            background: #45b7aa;
+            transform: translateY(-2px);
+        }
+
+        .color-palette {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+
+        .color-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .color-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .color-btn.active {
+            border-color: #333;
+            transform: scale(1.15);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .brush-size {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+
+        .brush-size label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .brush-size input[type="range"] {
+            width: 200px;
+        }
+
+        .brush-preview {
+            width: 30px;
+            height: 30px;
+            background: #333;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .character-info {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            font-size: 1.2em;
+            color: #666;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2em;
+            }
+            
+            .color-btn {
+                width: 40px;
+                height: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Character Creator</h1>
+        <p class="subtitle">Click "Generate" to get your random character, then paint it!</p>
+        
+        <div class="canvas-container">
+            <canvas id="canvas" width="500" height="500"></canvas>
+        </div>
+
+        <div class="controls">
+            <div class="button-group">
+                <button class="generate-btn" onclick="generateCharacter()">🎲 Generate Character</button>
+                <button class="reset-btn" onclick="resetCanvas()">🔄 Clear Colors</button>
+                <button class="download-btn" onclick="downloadImage()">💾 Download</button>
+            </div>
+
+            <div class="color-palette">
+                <div class="color-btn active" style="background: #FF6B6B" onclick="selectColor('#FF6B6B', this)"></div>
+                <div class="color-btn" style="background: #4ECDC4" onclick="selectColor('#4ECDC4', this)"></div>
+                <div class="color-btn" style="background: #45B7D1" onclick="selectColor('#45B7D1', this)"></div>
+                <div class="color-btn" style="background: #96CEB4" onclick="selectColor('#96CEB4', this)"></div>
+                <div class="color-btn" style="background: #FFEAA7" onclick="selectColor('#FFEAA7', this)"></div>
+                <div class="color-btn" style="background: #DDA0DD" onclick="selectColor('#DDA0DD', this)"></div>
+                <div class="color-btn" style="background: #98D8C8" onclick="selectColor('#98D8C8', this)"></div>
+                <div class="color-btn" style="background: #FFB6C1" onclick="selectColor('#FFB6C1', this)"></div>
+                <div class="color-btn" style="background: #FFA500" onclick="selectColor('#FFA500', this)"></div>
+                <div class="color-btn" style="background: #87CEEB" onclick="selectColor('#87CEEB', this)"></div>
+                <div class="color-btn" style="background: #F4A460" onclick="selectColor('#F4A460', this)"></div>
+                <div class="color-btn" style="background: #9370DB" onclick="selectColor('#9370DB', this)"></div>
+                <div class="color-btn" style="background: #20B2AA" onclick="selectColor('#20B2AA', this)"></div>
+                <div class="color-btn" style="background: #FF69B4" onclick="selectColor('#FF69B4', this)"></div>
+                <div class="color-btn" style="background: #FFFFFF" onclick="selectColor('#FFFFFF', this)"></div>
+            </div>
+
+            <div class="brush-size">
+                <label>Brush Size:</label>
+                <input type="range" id="brushSize" min="5" max="50" value="20" oninput="updateBrushSize(this.value)">
+                <div class="brush-preview" id="brushPreview"></div>
+            </div>
+
+            <div class="character-info" id="characterInfo">
+                Click "Generate Character" to start! 🎨
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let currentColor = '#FF6B6B';
+        let brushSize = 20;
+        let currentCharacter = null;
+        let colorLayer = null;
+        let outlineLayer = null;
+
+        // Character definitions with simplified paths
+        const characters = [
+            {
+                name: "DJ Headphones",
+                draw: function(ctx, scale = 1) {
+                    ctx.save();
+                    ctx.scale(scale, scale);
+                    ctx.lineWidth = 20;
+                    ctx.strokeStyle = '#000';
+                    ctx.fillStyle = '#FFF';
+                    
+                    // Head (large circle)
+                    ctx.beginPath();
+                    ctx.arc(250, 200, 80, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Headphones band
+                    ctx.beginPath();
+                    ctx.arc(250, 200, 100, Math.PI * 1.2, Math.PI * 1.8, true);
+                    ctx.stroke();
+                    
+                    // Left ear cup
+                    ctx.beginPath();
+                    ctx.arc(150, 200, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Right ear cup
+                    ctx.beginPath();
+                    ctx.arc(350, 200, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Angry eyes
+                    ctx.beginPath();
+                    ctx.moveTo(200, 180);
+                    ctx.lineTo(230, 200);
+                    ctx.lineTo(200, 200);
+                    ctx.closePath();
+                    ctx.fillStyle = '#000';
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(300, 180);
+                    ctx.lineTo(270, 200);
+                    ctx.lineTo(300, 200);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Body
+                    ctx.fillStyle = '#FFF';
+                    ctx.beginPath();
+                    ctx.ellipse(250, 330, 60, 80, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Arms
+                    ctx.beginPath();
+                    ctx.arc(190, 330, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.arc(310, 330, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Feet
+                    ctx.beginPath();
+                    ctx.arc(220, 400, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.arc(280, 400, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.restore();
+                }
+            },
+            {
+                name: "Cool Sunglasses",
+                draw: function(ctx, scale = 1) {
+                    ctx.save();
+                    ctx.scale(scale, scale);
+                    ctx.lineWidth = 20;
+                    ctx.strokeStyle = '#000';
+                    ctx.fillStyle = '#FFF';
+                    
+                    // Head
+                    ctx.beginPath();
+                    ctx.arc(250, 200, 80, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Sunglasses frame
+                    ctx.beginPath();
+                    ctx.moveTo(150, 190);
+                    ctx.lineTo(350, 190);
+                    ctx.stroke();
+                    
+                    // Left lens
+                    ctx.beginPath();
+                    ctx.ellipse(200, 200, 35, 30, 0, 0, Math.PI * 2);
+                    ctx.fillStyle = '#000';
+                    ctx.fill();
+                    ctx.strokeStyle = '#000';
+                    ctx.stroke();
+                    
+                    // Right lens
+                    ctx.beginPath();
+                    ctx.ellipse(300, 200, 35, 30, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Bridge
+                    ctx.beginPath();
+                    ctx.moveTo(235, 190);
+                    ctx.lineTo(265, 190);
+                    ctx.stroke();
+                    
+                    // Smile
+                    ctx.beginPath();
+                    ctx.arc(250, 220, 30, 0, Math.PI);
+                    ctx.stroke();
+                    
+                    // Body
+                    ctx.fillStyle = '#FFF';
+                    ctx.beginPath();
+                    ctx.ellipse(250, 330, 60, 80, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Arms
+                    ctx.beginPath();
+                    ctx.arc(190, 330, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.arc(310, 330, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Feet
+                    ctx.beginPath();
+                    ctx.arc(220, 400, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.arc(280, 400, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.restore();
+                }
+            },
+            {
+                name: "Wing Buddy",
+                draw: function(ctx, scale = 1) {
+                    ctx.save();
+                    ctx.scale(scale, scale);
+                    ctx.lineWidth = 20;
+                    ctx.strokeStyle = '#000';
+                    ctx.fillStyle = '#FFF';
+                    
+                    // Head
+                    ctx.beginPath();
+                    ctx.arc(250, 200, 80, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Wing-like eyes (left)
+                    ctx.beginPath();
+                    ctx.moveTo(180, 190);
+                    ctx.quadraticCurveTo(210, 170, 240, 190);
+                    ctx.quadraticCurveTo(210, 210, 180, 190);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Wing-like eyes (right)
+                    ctx.beginPath();
+                    ctx.moveTo(320, 190);
+                    ctx.quadraticCurveTo(290, 170, 260, 190);
+                    ctx.quadraticCurveTo(290, 210, 320, 190);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Smile
+                    ctx.beginPath();
+                    ctx.arc(250, 220, 30, 0, Math.PI);
+                    ctx.stroke();
+                    
+                    // Body
+                    ctx.beginPath();
+                    ctx.ellipse(250, 330, 60, 80, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Arms
+                    ctx.beginPath();
+                    ctx.arc(190, 330, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.arc(310, 330, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Feet
+                    ctx.beginPath();
+                    ctx.arc(220, 400, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.arc(280, 400, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.restore();
+                }
+            },
+            {
+                name: "Half-Moon Eyes",
+                draw: function(ctx, scale = 1) {
+                    ctx.save();
+                    ctx.scale(scale, scale);
+                    ctx.lineWidth = 20;
+                    ctx.strokeStyle = '#000';
+                    ctx.fillStyle = '#FFF';
+                    
+                    // Head
+                    ctx.beginPath();
+                    ctx.arc(250, 200, 80, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Half-moon eyes (left)
+                    ctx.beginPath();
+                    ctx.arc(210, 190, 25, 0, Math.PI);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Half-moon eyes (right)
+                    ctx.beginPath();
+                    ctx.arc(290, 190, 25, 0, Math.PI);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Smile
+                    ctx.beginPath();
+                    ctx.arc(250, 230, 25, 0, Math.PI);
+                    ctx.stroke();
+                    
+                    // Body
+                    ctx.beginPath();
+                    ctx.ellipse(250, 330, 60, 80, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Arms
+                    ctx.beginPath();
+                    ctx.arc(190, 330, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.arc(310, 330, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Feet
+                    ctx.beginPath();
+                    ctx.arc(220, 400, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.arc(280, 400, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.restore();
+                }
+            },
+            {
+                name: "Happy Glasses",
+                draw: function(ctx, scale = 1) {
+                    ctx.save();
+                    ctx.scale(scale, scale);
+                    ctx.lineWidth = 20;
+                    ctx.strokeStyle = '#000';
+                    ctx.fillStyle = '#FFF';
+                    
+                    // Head
+                    ctx.beginPath();
+                    ctx.arc(250, 200, 80, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Round glasses (left)
+                    ctx.beginPath();
+                    ctx.arc(210, 190, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Round glasses (right)
+                    ctx.beginPath();
+                    ctx.arc(290, 190, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Bridge
+                    ctx.beginPath();
+                    ctx.moveTo(240, 190);
+                    ctx.lineTo(260, 190);
+                    ctx.stroke();
+                    
+                    // Happy smile
+                    ctx.beginPath();
+                    ctx.arc(250, 230, 30, 0, Math.PI);
+                    ctx.stroke();
+                    
+                    // Body
+                    ctx.beginPath();
+                    ctx.ellipse(250, 330, 60, 80, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Arms
+                    ctx.beginPath();
+                    ctx.arc(190, 330, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.arc(310, 330, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Feet
+                    ctx.beginPath();
+                    ctx.arc(220, 400, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.arc(280, 400, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.restore();
+                }
+            }
+        ];
+
+        // Initialize canvas
+        function initCanvas() {
+            // Create color layer
+            colorLayer = document.createElement('canvas');
+            colorLayer.width = canvas.width;
+            colorLayer.height = canvas.height;
+            
+            // Create outline layer
+            outlineLayer = document.createElement('canvas');
+            outlineLayer.width = canvas.width;
+            outlineLayer.height = canvas.height;
+        }
+
+        // Generate random character
+        function generateCharacter() {
+            const randomIndex = Math.floor(Math.random() * characters.length);
+            currentCharacter = characters[randomIndex];
+            
+            // Clear all layers
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const colorCtx = colorLayer.getContext('2d');
+            colorCtx.clearRect(0, 0, colorLayer.width, colorLayer.height);
+            
+            // Draw character outline on outline layer
+            const outlineCtx = outlineLayer.getContext('2d');
+            outlineCtx.clearRect(0, 0, outlineLayer.width, outlineLayer.height);
+            currentCharacter.draw(outlineCtx);
+            
+            // Composite layers
+            updateCanvas();
+            
+            // Update info
+            document.getElementById('characterInfo').innerHTML = 
+                `✨ You got: <strong>${currentCharacter.name}</strong>! Start coloring! 🎨`;
+        }
+
+        // Update canvas with all layers
+        function updateCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw color layer first (underneath)
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.drawImage(colorLayer, 0, 0);
+            
+            // Draw outline on top
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.drawImage(outlineLayer, 0, 0);
+        }
+
+        // Reset canvas (clear colors only)
+        function resetCanvas() {
+            if (!currentCharacter) {
+                alert('Generate a character first!');
+                return;
+            }
+            
+            const colorCtx = colorLayer.getContext('2d');
+            colorCtx.clearRect(0, 0, colorLayer.width, colorLayer.height);
+            updateCanvas();
+        }
+
+        // Download image
+        function downloadImage() {
+            if (!currentCharacter) {
+                alert('Generate a character first!');
+                return;
+            }
+            
+            const link = document.createElement('a');
+            link.download = `character_${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // Select color
+        function selectColor(color, element) {
+            currentColor = color;
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            element.classList.add('active');
+            updateBrushPreview();
+        }
+
+        // Update brush size
+        function updateBrushSize(size) {
+            brushSize = size;
+            updateBrushPreview();
+        }
+
+        // Update brush preview
+        function updateBrushPreview() {
+            const preview = document.getElementById('brushPreview');
+            preview.style.width = brushSize + 'px';
+            preview.style.height = brushSize + 'px';
+            preview.style.background = currentColor;
+        }
+
+        // Drawing functions
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            const mouseEvent = new MouseEvent('mouseup', {});
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        function startDrawing(e) {
+            if (!currentCharacter) {
+                alert('Generate a character first!');
+                return;
+            }
+            isDrawing = true;
+            draw(e);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Draw on color layer
+            const colorCtx = colorLayer.getContext('2d');
+            colorCtx.globalCompositeOperation = 'source-over';
+            colorCtx.fillStyle = currentColor;
+            colorCtx.beginPath();
+            colorCtx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+            colorCtx.fill();
+            
+            // Update main canvas
+            updateCanvas();
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        // Initialize
+        initCanvas();
+        updateBrushPreview();
+        
+        // Auto-generate a character on load
+        setTimeout(() => {
+            generateCharacter();
+        }, 500);
+    </script>
+</body>
+</html>

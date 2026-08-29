@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Animation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000000; /* Changed back to black */
+            color: #FFFFFF; /* Changed back to white */
+            font-family: 'Times New Roman', serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 50px;
+            padding: 0;
+        }
+
+
+        .code-window {
+            position: relative;
+            width: 45vw;
+            max-width: 800px;
+            height: 80vh;
+            max-height: 900px;
+            background-color: rgba(0, 0, 0, 0.95); /* Black background */
+            border-width: 4px;
+            border-style: solid;
+            border-color: #FFFFFF; /* White border */
+            box-shadow: none;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: none; /* Removed animation */
+        }
+       
+        /* Positioning for the windows - optimized for desktop */
+        .window-left {
+            margin-top: 0;
+            transform: translateY(-100px);
+        }
+       
+        .window-right {
+            margin-top: 0;
+            transform: translateY(100px);
+        }
+
+
+        .window-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 10px;
+            background-color: #000000; /* Black background */
+            border-bottom: 2px solid #FFFFFF; /* White border */
+            animation: none; /* Removed animation */
+        }
+
+
+        .window-title {
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #FFFFFF; /* White text */
+            animation: none; /* Removed animation */
+        }
+
+
+        .window-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+
+        .window-button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid #FFFFFF; /* White border */
+            animation: none; /* Removed animation */
+        }
+
+
+        .code-content {
+            flex: 1;
+            overflow: hidden;
+            white-space: pre;
+            font-family: 'Courier New', monospace;
+            color: #FFFFFF; /* White text */
+            font-weight: 600; /* Reduced from 900 */
+            font-size: 12px; /* Reduced from 16px */
+            line-height: 1.2;
+            padding: 8px; /* Reduced from 15px */
+            background-color: #000000; /* Black background */
+            animation: none;
+        }
+
+
+        .toolbar {
+            height: 25px;
+            background-color: #000000; /* Black background */
+            border-top: 2px solid #FFFFFF; /* White border */
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 10px;
+            animation: none; /* Removed animation */
+        }
+
+
+        .toolbar-item {
+            margin-right: 15px;
+            cursor: pointer;
+            color: #FFFFFF; /* White text */
+            animation: none; /* Removed animation */
+        }
+
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 14px;
+            background-color: #FFFFFF; /* White cursor */
+            animation: blink 0.8s infinite;
+            vertical-align: middle;
+        }
+
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+
+        /* Update the mobile layout to stack windows vertically and make them look better */
+        @media (max-width: 900px) {
+            body {
+                flex-direction: column; /* Stack windows vertically */
+                justify-content: center;
+                align-items: center;
+                gap: 30px; /* Space between windows */
+                padding: 20px;
+                height: auto; /* Allow scrolling if needed */
+                min-height: 100vh;
+            }
+           
+            .code-window {
+                width: 90vw; /* Almost full width */
+                height: 40vh; /* Shorter height */
+                max-width: none; /* Override desktop max-width */
+                margin: 0; /* Remove margins */
+                transform: none !important; /* Remove all transforms */
+            }
+           
+            .window-left, .window-right {
+                transform: none !important; /* Override any transforms */
+                margin: 0;
+            }
+           
+            /* Remove the small screen override that was causing problems */
+            @media (max-width: 600px) {
+                body {
+                    flex-direction: column;
+                    gap: 30px;
+                }
+               
+                .code-window {
+                    width: 90vw;
+                    height: 40vh;
+                    transform: none !important;
+                }
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="code-window window-left">
+        <div class="window-header">
+            <div class="window-title">RawmWare.OS - [ScriptLog]</div>
+            <div class="window-buttons">
+                <div class="window-button"></div>
+                <div class="window-button"></div>
+                <div class="window-button"></div>
+            </div>
+        </div>
+        <div class="code-content" id="code-area-1"></div>
+        <div class="toolbar">
+            <span class="toolbar-item">FILE</span>
+            <span class="toolbar-item">EDIT</span>
+            <span class="toolbar-item">VIEW</span>
+            <span class="toolbar-item">TOOLS</span>
+        </div>
+    </div>
+
+
+    <div class="code-window window-right">
+        <div class="window-header">
+            <div class="window-title">RawmWare.OS - [ScriptLog]</div>
+            <div class="window-buttons">
+                <div class="window-button"></div>
+                <div class="window-button"></div>
+                <div class="window-button"></div>
+            </div>
+        </div>
+        <div class="code-content" id="code-area-2"></div>
+        <div class="toolbar">
+            <span class="toolbar-item">FILE</span>
+            <span class="toolbar-item">EDIT</span>
+            <span class="toolbar-item">VIEW</span>
+            <span class="toolbar-item">TOOLS</span>
+        </div>
+    </div>
+
+
+    <script>
+        const codeArea1 = document.getElementById('code-area-1');
+        const codeArea2 = document.getElementById('code-area-2');
+       
+        // Updated code snippets for cyber attack scenario in top window
+        const codeSnippets1 = [
+            '/**\n\
+ * Advanced Intrusion Framework\n\
+ * @module OffensiveOperations\n\
+ * @version X.0.1\n\
+ * @author H4x0r_Prim3\n\
+ */\n\
+\n\
+class AdvancedPenetrationSuite {\n\
+    constructor(target) {\n\
+        this.target = target;           // Target system information\n\
+        this.exploits = new Map();      // Available exploit library\n\
+        this.shells = [];               // Active shell connections\n\
+        this.signature = this.generateRandomSignature();\n\
+        this.proxies = this.setupProxyChain(7); // Seven-hop proxy chain\n\
+        this.logsCleared = false;       // Track if logs were scrubbed\n\
+    }\n\
+\n\
+    async beginRecon() {\n\
+        console.log(`[*] Beginning reconnaissance on ${this.target.hostname}`);\n\
+        \n\
+        const results = await Promise.all([\n\
+            this.portScan(this.target.ip, [20, 21, 22, 23, 25, 53, 80, 443, 445, 3389]),\n\
+            this.fingerprintOS(this.target.ip),\n\
+            this.enumerateServices(),\n\
+            this.checkVulnerabilities()\n\
+        ]);\n\
+        \n\
+        return this.analyzeAttackSurface(results);\n\
+    }\n\
+\n\
+    injectPayload(vulnerability, payload) {\n\
+        console.log(`[*] Preparing ${payload.type} payload for ${vulnerability}`);\n\
+        \n\
+        const encoded = this.obfuscate(payload.data, {\n\
+            method: "polymorphic",\n\
+            iterations: 3,\n\
+            avEvasion: true\n\
+        });\n\
+        \n\
+        return this.transmit(encoded, {\n\
+            protocol: vulnerability.vector,\n\
+            timeout: 5000,\n\
+            retries: 3,\n\
+            fragmentationOn: true\n\
+        });\n\
+    }\n\
+\n\
+    escalatePrivileges(shell) {\n\
+        console.log(`[*] Attempting privilege escalation on ${this.target.hostname}`);\n\
+        \n\
+        const techniques = [\n\
+            this.kernelExploit(),\n\
+            this.bufferOverflow(),\n\
+            this.hijackTokens(),\n\
+            this.bypassUAC()\n\
+        ];\n\
+        \n\
+        for (const technique of techniques) {\n\
+            const result = technique.execute(shell);\n\
+            if (result.success) {\n\
+                console.log(`[+] Privileges escalated via ${technique.name}!`);\n\
+                return result.newShell;\n\
+            }\n\
+        }\n\
+        \n\
+        return null;\n\
+    }\n\
+\n\
+    exfiltrateData(paths) {\n\
+        console.log(`[*] Beginning data exfiltration...`);\n\
+        \n\
+        const encryptionKey = this.generateEncryptionKey();\n\
+        let totalExfiltrated = 0;\n\
+        \n\
+        for (const path of paths) {\n\
+            const data = this.readData(path);\n\
+            if (data) {\n\
+                const encrypted = this.encryptData(data, encryptionKey);\n\
+                const chunks = this.chunkData(encrypted, 1024);\n\
+                \n\
+                for (const chunk of chunks) {\n\
+                    const success = this.sendDataThroughCovertChannel(chunk);\n\
+                    if (success) totalExfiltrated += chunk.length;\n\
+                }\n\
+            }\n\
+        }\n\
+        \n\
+        return {\n\
+            status: "complete",\n\
+            bytesExfiltrated: totalExfiltrated,\n\
+            timestamp: new Date().toISOString()\n\
+        };\n\
+    }\n\
+\n\
+    implantBackdoor(type = "persistence") {\n\
+        const options = {\n\
+            startup: true,\n\
+            registry: true,\n\
+            service: true,\n\
+            bootRecord: false,\n\
+            firmware: false,\n\
+            scheduled: true\n\
+        };\n\
+        \n\
+        const backdoor = this.createBackdoor(type, options);\n\
+        console.log(`[+] Backdoor implanted: ${backdoor.id}`);\n\
+        \n\
+        return backdoor.connectionInfo;\n\
+    }\n\
+\n\
+    coverTracks() {\n\
+        console.log(`[*] Cleaning up evidence...`);\n\
+        \n\
+        this.clearLogs();\n\
+        this.removeArtifacts();\n\
+        this.modifyTimestamps();\n\
+        this.eraseCommandHistory();\n\
+        \n\
+        return true;\n\
+    }\n\
+}'
+        ];
+       
+        // Keeping original code snippets for bottom window
+        const codeSnippets2 = [
+            '/**\n\
+ * Cyber Defense Matrix\n\
+ * @module NetworkWarfare\n\
+ * @version Ω.9.7\n\
+ * @author Cmdr. Σ. Gibson\n\
+ */\n\
+\n\
+class CyberDefenseMatrix {\n\
+    constructor(Ψ) {\n\
+        this.Ψ = Ψ;                    // Security clearance level\n\
+        this.Δ = new Map();            // Attack vector database\n\
+        this.ξ = [];                   // Active threats\n\
+        this.π = this.initializeFirewall();\n\
+        this.Φ = 0;                    // Breach attempts\n\
+        this.μ = new Array(8);         // Defense protocols\n\
+    }\n\
+\n\
+    initializeDefenseGrid() {\n\
+        this.nodes = new QuantumMesh({\n\
+            encryption: "AES-512-quantum",\n\
+            topology: "hypercube",\n\
+            redundancy: this.calculateRedundancy(),\n\
+            entropy: this.generateEntropy()\n\
+        });\n\
+\n\
+        for (let i = 0; i < this.μ.length; i++) {\n\
+            this.μ[i] = {\n\
+                status: "ACTIVE",\n\
+                signature: this.generateSignature(),\n\
+                countermeasures: this.loadCountermeasures(i),\n\
+                neural_response: this.initializeAI()\n\
+            };\n\
+        }\n\
+        console.log(`Defense grid online: ${this.μ.length} protocols active`);\n\
+    }\n\
+\n\
+    async detectIntrusion(packet) {\n\
+        const Γ = this.calculateThreatLevel(packet);\n\
+        const ω = this.analyzeAttackPattern(packet);\n\
+        \n\
+        if (Γ > this.Ψ) {\n\
+            await this.deployCountermeasures({\n\
+                target: packet.origin,\n\
+                intensity: Γ * 2,\n\
+                pattern: this.generateDefensePattern(),\n\
+                encryption: this.rotateEncryptionKeys()\n\
+            });\n\
+        }\n\
+        return this.validateSystemIntegrity();\n\
+    }\n\
+\n\
+    deployHoneypot(depth = 3) {\n\
+        const trap = new DeceptionGrid({\n\
+            layers: depth,\n\
+            complexity: this.Ψ * 1.5,\n\
+            authenticity: 0.95\n\
+        });\n\
+\n\
+        return trap.simulate({\n\
+            services: this.generateFakeServices(),\n\
+            vulnerabilities: this.generateFakeVulns(),\n\
+            responses: this.generateTrapResponses()\n\
+        });\n\
+    }\n\
+\n\
+    async counterAttack(threat) {\n\
+        const Ω = this.calculateOptimalResponse(threat);\n\
+        const σ = this.synthesizeAttackVector(threat.signature);\n\
+        \n\
+        await this.executeSequence([\n\
+            this.disruptCommand(threat.origin),\n\
+            this.injectChaos(threat.channels),\n\
+            this.deployDigitalSmoke(),\n\
+            this.mirrorAttackPattern(σ)\n\
+        ]);\n\
+\n\
+        return this.assessDamage();\n\
+    }\n\
+\n\
+    monitorBattleSpace() {\n\
+        setInterval(() => {\n\
+            const status = this.getSystemStatus();\n\
+            const threats = this.activeThreats.length;\n\
+            \n\
+            console.log(`[DEFENSE MATRIX STATUS]`);\n\
+            console.log(`Active Threats: ${threats}`);\n\
+            console.log(`System Integrity: ${status.integrity}%`);\n\
+            console.log(`Defense Grid: ${status.grid_status}`);\n\
+            console.log(`Counter-measures: ${status.countermeasures_active}`);\n\
+            \n\
+            if (threats > 0) {\n\
+                this.escalateDefcon(Math.min(threats, 5));\n\
+            }\n\
+        }, 1000);\n\
+    }\n\
+\n\
+    async executeProtocol(name) {\n\
+        switch(name.toUpperCase()) {\n\
+            case "ZERO_DAY":\n\
+                await this.activateEmergencyProtocols();\n\
+                this.initializeCounterOffensive();\n\
+                break;\n\
+            case "GHOST_PROTOCOL":\n\
+                await this.vanishFromNetwork();\n\
+                this.replicateDefenses();\n\
+                break;\n\
+            case "DEADMAN_SWITCH":\n\
+                await this.scorchEarth();\n\
+                this.broadcastWarning();\n\
+                break;\n\
+        }\n\
+    }\n\
+}'
+        ];
+       
+        // Variables to control typing animation
+        let currentSnippetIndex1 = 0;
+        let currentCharIndex1 = 0;
+        let currentText1 = '';
+        let isDeleting1 = false;
+        let typingSpeed1 = 5; // Faster typing speed
+       
+        let currentSnippetIndex2 = 0;
+        let currentCharIndex2 = 0;
+        let currentText2 = '';
+        let isDeleting2 = false;
+        let typingSpeed2 = 5; // Faster typing speed
+       
+        function typeCode1() {
+            const currentSnippet = codeSnippets1[currentSnippetIndex1];
+           
+            if (isDeleting1) {
+                // Delete characters faster
+                currentText1 = currentText1.substring(0, currentText1.length - 3);
+                typingSpeed1 = 2;
+               
+                if (currentText1 === '') {
+                    isDeleting1 = false;
+                    currentSnippetIndex1 = (currentSnippetIndex1 + 1) % codeSnippets1.length;
+                    typingSpeed1 = 5;
+                }
+            } else {
+                // Add characters faster
+                currentText1 = currentSnippet.substring(0, currentCharIndex1 + 1);
+                currentCharIndex1++;
+               
+                // Random typing speed variations but faster overall
+                typingSpeed1 = Math.random() * 10 + 5;
+               
+                if (currentCharIndex1 === currentSnippet.length) {
+                    // Shorter pause at the end of typing before deleting
+                    isDeleting1 = true;
+                    typingSpeed1 = 500; // Shorter pause before deleting
+                    currentCharIndex1 = 0;
+                }
+            }
+           
+            // Display the current text with a blinking cursor
+            codeArea1.innerHTML = currentText1 + '<span class="cursor"></span>';
+           
+            // Auto-scroll to bottom
+            codeArea1.scrollTop = codeArea1.scrollHeight;
+           
+            // Schedule the next update
+            setTimeout(typeCode1, typingSpeed1);
+        }
+       
+        function typeCode2() {
+            const currentSnippet = codeSnippets2[currentSnippetIndex2];
+           
+            if (isDeleting2) {
+                // Delete characters faster
+                currentText2 = currentText2.substring(0, currentText2.length - 3);
+                typingSpeed2 = 2;
+               
+                if (currentText2 === '') {
+                    isDeleting2 = false;
+                    currentSnippetIndex2 = (currentSnippetIndex2 + 1) % codeSnippets2.length;
+                    typingSpeed2 = 5;
+                }
+            } else {
+                // Add characters faster
+                currentText2 = currentSnippet.substring(0, currentCharIndex2 + 1);
+                currentCharIndex2++;
+               
+                // Random typing speed variations but faster overall
+                typingSpeed2 = Math.random() * 10 + 5;
+               
+                if (currentCharIndex2 === currentSnippet.length) {
+                    // Shorter pause at the end of typing before deleting
+                    isDeleting2 = true;
+                    typingSpeed2 = 500; // Shorter pause before deleting
+                    currentCharIndex2 = 0;
+                }
+            }
+           
+            // Display the current text with a blinking cursor
+            codeArea2.innerHTML = currentText2 + '<span class="cursor"></span>';
+           
+            // Auto-scroll to bottom
+            codeArea2.scrollTop = codeArea2.scrollHeight;
+           
+            // Schedule the next update
+            setTimeout(typeCode2, typingSpeed2);
+        }
+       
+        // Start the typing animations
+        typeCode1();
+        typeCode2();
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

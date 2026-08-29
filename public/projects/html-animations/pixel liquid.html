@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Fluid Simulation</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        /* Add these styles for the visualizer window */
+        .control-window {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            width: 150px;
+            background: rgba(255, 255, 255, 0);
+            border: 2px solid #c3c3c3;
+            z-index: 1000;
+        }
+
+        .title-bar {
+            background: #ece9d8;
+            padding: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: move;
+            user-select: none;
+        }
+
+        .title {
+            flex-grow: 1;
+            font-size: 10px;
+            padding-left: 5px;
+            font-family: 'Tahoma', sans-serif;
+        }
+
+        .buttons {
+            display: flex;
+        }
+
+        .window-button {
+            width: 16px;
+            height: 16px;
+            margin-left: 2px;
+            border: 1px solid #7b7b7b;
+            background: linear-gradient(to bottom, #fff, #dfdfdf);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+
+        .window-button:hover {
+            background: linear-gradient(to bottom, #fff, #f0f0f0);
+        }
+
+        /* Add button click effect */
+        .window-button:active {
+            background: #c0c0c0;
+        }
+
+        .window-content {
+            padding: 5px;
+        }
+
+        #visualizer {
+            width: 140px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0);
+            display: block;
+        }
+    </style>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+</head>
+<body>
+    <!-- Add the visualizer window before the renderCanvas -->
+    <div class="control-window" id="waveformWindow">
+        <div class="title-bar">
+            <div class="title"><em><strong>RawmWare.OS</strong></em></div>
+            <div class="buttons">
+                <div class="window-button minimize">_</div>
+                <div class="window-button maximize">□</div>
+                <div class="window-button close">×</div>
+            </div>
+        </div>
+        <div class="window-content">
+            <canvas id="visualizer"></canvas>
+        </div>
+    </div>
+
+    <canvas id="renderCanvas"></canvas>
+
+    <script>
+        const visualizerCanvas = document.getElementById('visualizer');
+        const ctx = visualizerCanvas.getContext('2d');
+
+        visualizerCanvas.width = 140;
+        visualizerCanvas.height = 60;
+
+        let points = [];
+        const totalPoints = 75;
+        const lineColor = '#FFFFFF';
+        let frameCount = 0;
+        let flatLineCounter = 0;
+
+        const centerY = visualizerCanvas.height / 2;
+
+        for (let i = 0; i < totalPoints; i++) {
+            points.push(centerY);
+        }
+
+        function animateWaveform() {
+            frameCount++;
+            
+            if (frameCount % 1 === 0) {
+                ctx.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
+                points.shift();
+                
+                if (Math.random() < 0.25) {
+                    points.push(centerY + (Math.random() - 0.5) * 40);
+                } else {
+                    points.push(centerY + (Math.random() - 0.5) * 8);
+                    flatLineCounter++;
+                }
+                
+                ctx.beginPath();
+                ctx.strokeStyle = lineColor;
+                ctx.lineWidth = 1;
+                
+                for (let i = 0; i < points.length; i++) {
+                    if (i === 0) {
+                        ctx.moveTo(0, points[i]);
+                    } else {
+                        ctx.lineTo(i * (visualizerCanvas.width / totalPoints), points[i]);
+                    }
+                }
+                
+                ctx.stroke();
+            }
+            
+            requestAnimationFrame(animateWaveform);
+        }
+
+        // Start the waveform animation
+        animateWaveform();
+
+        const canvas = document.getElementById("renderCanvas");
+        const engine = new BABYLON.Engine(canvas, true);
+
+        let createScene = async function () {
+            let scene = new BABYLON.Scene(engine);
+            scene.clearColor = BABYLON.Color3.Black();
+
+            let camera = new BABYLON.ArcRotateCamera("camera1",
+                BABYLON.Tools.ToRadians(-90),
+                BABYLON.Tools.ToRadians(90),
+                5,
+                new BABYLON.Vector3(0, 0, 0), scene);
+            camera.inputs.clear();
+            camera.alpha = BABYLON.Tools.ToRadians(-90);
+            camera.beta = BABYLON.Tools.ToRadians(90);
+
+            let material = new BABYLON.StandardMaterial("mat", scene);
+            material.emissiveColor = BABYLON.Color3.White();
+
+            function IX(x, y) {
+                return x + y * N;
+            }
+
+            function diffuse(b, x, x0, diff, dt) {
+                let a = dt * diff * (N - 2) * (N - 2);
+                lin_solve(b, x, x0, a, 1 + 6 * a);
+            }
+
+            function lin_solve(b, x, x0, a, c) {
+                let cRecip = 1.0 / c;
+                for (let t = 0; t < iter; t++) {
+                    for (let j = 1; j < N - 1; j++) {
+                        for (let i = 1; i < N - 1; i++) {
+                            x[IX(i, j)] =
+                                (x0[IX(i, j)] +
+                                    a *
+                                    (x[IX(i + 1, j)] +
+                                        x[IX(i - 1, j)] +
+                                        x[IX(i, j + 1)] +
+                                        x[IX(i, j - 1)])) *
+                                cRecip;
+                        }
+                    }
+                    set_bnd(b, x);
+                }
+            }
+
+            function project(velocX, velocY, p, div) {
+                for (let j = 1; j < N - 1; j++) {
+                    for (let i = 1; i < N - 1; i++) {
+                        div[IX(i, j)] =
+                            (-0.5 *
+                                (velocX[IX(i + 1, j)] -
+                                    velocX[IX(i - 1, j)] +
+                                    velocY[IX(i, j + 1)] -
+                                    velocY[IX(i, j - 1)])) /
+                            N;
+                        p[IX(i, j)] = 0;
+                    }
+                }
+
+                set_bnd(0, div);
+                set_bnd(0, p);
+                lin_solve(0, p, div, 1, 6);
+
+                for (let j = 1; j < N - 1; j++) {
+                    for (let i = 1; i < N - 1; i++) {
+                        velocX[IX(i, j)] -= 0.5 * (p[IX(i + 1, j)] - p[IX(i - 1, j)]) * N;
+                        velocY[IX(i, j)] -= 0.5 * (p[IX(i, j + 1)] - p[IX(i, j - 1)]) * N;
+                    }
+                }
+
+                set_bnd(1, velocX);
+                set_bnd(2, velocY);
+            }
+
+            function advect(b, d, d0, velocX, velocY, dt) {
+                let i0, i1, j0, j1;
+                let dtx = dt * (N - 2);
+                let dty = dt * (N - 2);
+                let s0, s1, t0, t1;
+                let tmp1, tmp2, x, y;
+                let Nfloat = N - 2;
+                let ifloat, jfloat;
+                let i, j;
+
+                for (j = 1, jfloat = 1; j < N - 1; j++, jfloat++) {
+                    for (i = 1, ifloat = 1; i < N - 1; i++, ifloat++) {
+                        tmp1 = dtx * velocX[IX(i, j)];
+                        tmp2 = dty * velocY[IX(i, j)];
+                        x = ifloat - tmp1;
+                        y = jfloat - tmp2;
+
+                        if (x < 0.5) x = 0.5;
+                        if (x > Nfloat + 0.5) x = Nfloat + 0.5;
+                        i0 = Math.floor(x);
+                        i1 = i0 + 1.0;
+                        if (y < 0.5) y = 0.5;
+                        if (y > Nfloat + 0.5) y = Nfloat + 0.5;
+                        j0 = Math.floor(y);
+                        j1 = j0 + 1.0;
+
+                        s1 = x - i0;
+                        s0 = 1.0 - s1;
+                        t1 = y - j0;
+                        t0 = 1.0 - t1;
+
+                        let i0i = parseInt(i0);
+                        let i1i = parseInt(i1);
+                        let j0i = parseInt(j0);
+                        let j1i = parseInt(j1);
+
+                        d[IX(i, j)] =
+                            s0 * (t0 * d0[IX(i0i, j0i)] + t1 * d0[IX(i0i, j1i)]) +
+                            s1 * (t0 * d0[IX(i1i, j0i)] + t1 * d0[IX(i1i, j1i)]);
+                    }
+                }
+
+                set_bnd(b, d);
+            }
+
+            function set_bnd(b, x) {
+                for (let i = 1; i < N - 1; i++) {
+                    x[IX(i, 0)] = b == 2 ? -x[IX(i, 1)] : x[IX(i, 1)];
+                    x[IX(i, N - 1)] = b == 2 ? -x[IX(i, N - 2)] : x[IX(i, N - 2)];
+                }
+                for (let j = 1; j < N - 1; j++) {
+                    x[IX(0, j)] = b == 1 ? -x[IX(1, j)] : x[IX(1, j)];
+                    x[IX(N - 1, j)] = b == 1 ? -x[IX(N - 2, j)] : x[IX(N - 2, j)];
+                }
+
+                x[IX(0, 0)] = 0.5 * (x[IX(1, 0)] + x[IX(0, 1)]);
+                x[IX(0, N - 1)] = 0.5 * (x[IX(1, N - 1)] + x[IX(0, N - 2)]);
+                x[IX(N - 1, 0)] = 0.5 * (x[IX(N - 2, 0)] + x[IX(N - 1, 1)]);
+                x[IX(N - 1, N - 1)] = 0.5 * (x[IX(N - 2, N - 1)] + x[IX(N - 1, N - 2)]);
+            }
+
+            let N = 256;
+            let iter = 16;
+            let SCALE = 1;
+            let t = 0;
+            let colorOffset = 0;
+            let uniformScale = 1;
+
+            function hslToRgb(h, s, l) {
+                let r, g, b;
+                if (s === 0) {
+                    r = g = b = l;
+                } else {
+                    function hue2rgb(p, q, t) {
+                        if (t < 0) t += 1;
+                        if (t > 1) t -= 1;
+                        if (t < 1/6) return p + (q - p) * 6 * t;
+                        if (t < 1/2) return q;
+                        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                        return p;
+                    }
+                    let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    let p = 2 * l - q;
+                    r = hue2rgb(p, q, h + 1/3);
+                    g = hue2rgb(p, q, h);
+                    b = hue2rgb(p, q, h - 1/3);
+                }
+                return [r, g, b];
+            }
+
+            class Fluid {
+                constructor(dt, diffusion, viscosity) {
+                    this.size = N;
+                    this.dt = dt;
+                    this.diff = diffusion;
+                    this.visc = viscosity;
+
+                    this.s = new Array(N * N).fill(0);
+                    this.density = new Array(N * N).fill(0);
+
+                    this.Vx = new Array(N * N).fill(0);
+                    this.Vy = new Array(N * N).fill(0);
+
+                    this.Vx0 = new Array(N * N).fill(0);
+                    this.Vy0 = new Array(N * N).fill(0);
+                }
+
+                step() {
+                    let N = this.size;
+                    let visc = this.visc;
+                    let diff = this.diff;
+                    let dt = this.dt;
+                    let Vx = this.Vx;
+                    let Vy = this.Vy;
+                    let Vx0 = this.Vx0;
+                    let Vy0 = this.Vy0;
+                    let s = this.s;
+                    let density = this.density;
+
+                    diffuse(1, Vx0, Vx, visc, dt);
+                    diffuse(2, Vy0, Vy, visc, dt);
+
+                    project(Vx0, Vy0, Vx, Vy);
+
+                    advect(1, Vx, Vx0, Vx0, Vy0, dt);
+                    advect(2, Vy, Vy0, Vx0, Vy0, dt);
+
+                    project(Vx, Vy, Vx0, Vy0);
+                    diffuse(0, s, density, diff, dt);
+                    advect(0, density, s, Vx, Vy, dt);
+                }
+
+                addDensity(x, y, amount) {
+                    let index = IX(x, y);
+                    this.density[index] += amount;
+                }
+
+                addVelocity(x, y, amountX, amountY) {
+                    let index = IX(x, y);
+                    this.Vx[index] += amountX;
+                    this.Vy[index] += amountY;
+                }
+
+                fadeD() {
+                    for (let i = 0; i < this.density.length; i++) {
+                        if (this.density[i] > 100000) {
+                            this.density[i] = Math.max(0, this.density[i] - 200);
+                        } else {
+                            this.density[i] = Math.max(0, this.density[i] - 0.18);
+                        }
+                    }
+                }
+            }
+
+            const TWO_PI = 2 * Math.PI;
+            let fluid = new Fluid(0.4, 0, 0.0000001);
+
+            let random = (min, max) => {
+                return min + Math.random() * (max - min);
+            }
+
+            let noise = (t) => {
+                return 5 * Math.random();
+            }
+
+            function draw() {
+                let width = N;
+                let height = N;
+                
+                for (let k = 0; k < 3; k++) {
+                    let cx = Math.floor(width/2 + Math.sin(t * 10) * width/10);
+                    let cy = Math.floor(height/2 + Math.cos(t * 10.0) * height/10);  
+                    
+                    for (let i = -1; i <= 1; i++) {
+                        for (let j = -1; j <= 1; j++) {
+                            fluid.addDensity(cx + i, cy + j, random(15, 35));
+                        }
+                    }
+
+                    let angle = noise(t + k) * TWO_PI;
+                    let v = new BABYLON.Vector2(Math.cos(angle), Math.sin(angle));
+                    v.scaleInPlace(0.3);
+                    fluid.addVelocity(cx, cy, v.x, v.y);
+                }
+
+                for (let k = 0; k < 2; k++) {
+                    let nx = Math.floor(width/2 + Math.cos(t * 1.0) * width/3);
+                    let ny = Math.floor(height/2 + Math.sin(t * 1.0) * height/3);
+                    fluid.addDensity(nx, ny, -10);
+                }
+
+                fluid.step();
+                fluid.fadeD();
+                t += .01;
+                colorOffset += 0.006;
+            }
+
+            let rows = N;
+            let cols = N;
+            let psize = 4;
+            let pcs = new BABYLON.PointsCloudSystem("pcs", psize, scene);
+
+            pcs.addPoints(rows * cols, function (particle, i) {
+                let x = i % cols;
+                let y = Math.floor(i / cols);
+
+                particle.position.x = ((-cols / 2 + x) / (20 * psize)) * uniformScale;
+                particle.position.y = ((-rows / 2 + y) / (20 * psize)) * uniformScale;
+                particle.position.z = 0;
+                particle.color = new BABYLON.Color3(0, 0, 0);
+            });
+
+            function getParticleAt(x, y) {
+                if (x < 0 || x >= cols || y < 0 || y >= rows) return null;
+                let index = y * cols + x;
+                return pcs.particles[index];
+            }
+
+            scene.onPointerDown = function(evt, pickResult) {
+                if (!pickResult.pickedPoint) return;
+                
+                let x = Math.floor((pickResult.pickedPoint.x / uniformScale + cols/(40*psize)) * 20 * psize);
+                let y = Math.floor((pickResult.pickedPoint.y / uniformScale + rows/(40*psize)) * 20 * psize);
+                
+                if (x >= 0 && x < cols && y >= 0 && y < rows) {
+                    for (let i = -2; i <= 2; i++) {
+                        for (let j = -2; j <= 2; j++) {
+                            let dist = Math.sqrt(i*i + j*j);
+                            if (dist <= 2) {
+                                fluid.addDensity(x + i, y + j, random(50, 100) * (1 - dist/2));
+                            }
+                        }
+                    }
+                    
+                    for (let angle = 0; angle < TWO_PI; angle += TWO_PI/8) {
+                        let vx = Math.cos(angle);
+                        let vy = Math.sin(angle);
+                        fluid.addVelocity(x, y, vx * 0.5, vy * 0.5);
+                    }
+                }
+            };
+
+            pcs.buildMeshAsync().then(function (mesh) {
+                let update = () => {
+                    draw();
+
+                    for (let i = 0; i < N; i++) {
+                        for (let j = 0; j < N; j++) {
+                            let x = i * SCALE;
+                            let y = j * SCALE;
+                            let d = fluid.density[IX(i, j)] / 255;
+                            let p1 = getParticleAt(x, y);
+                            if (!p1) continue;
+
+                            if (d < 0.01) {
+                                p1.color.set(0, 0, 0);
+                            } else {
+                                let hue = (colorOffset + d * 0.5) % 1;
+                                let [r, g, b] = hslToRgb(hue, 0.8, 0.5);
+                                
+                                p1.color.set(
+                                    Math.min(1, r * (1 + d * 2)),
+                                    Math.min(1, g * (1 + d * 2)),
+                                    Math.min(1, b * (1 + d * 2))
+                                );
+                            }
+                        }
+                    }
+
+                    pcs.setParticles();
+                }
+
+                scene.registerAfterRender(function () {
+                    update();
+                });
+            });
+
+            return scene;
+        }
+
+        createScene().then(scene => {
+            engine.runRenderLoop(function () {
+                scene.render();
+            });
+        });
+
+        window.addEventListener("resize", function () {
+            engine.resize();
+        });
+
+        // Add this JavaScript for button functionality
+        document.querySelectorAll('.window-button').forEach(button => {
+            button.addEventListener('mousedown', () => {
+                button.style.background = '#c0c0c0';
+            });
+            button.addEventListener('mouseup', () => {
+                button.style.background = 'linear-gradient(to bottom, #fff, #dfdfdf)';
+            });
+        });
+
+        // Make window draggable
+        const waveformWindow = document.getElementById('waveformWindow');
+        const titleBar = waveformWindow.querySelector('.title-bar');
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+
+        titleBar.addEventListener('mousedown', function(e) {
+            isDragging = true;
+            initialX = e.clientX - waveformWindow.offsetLeft;
+            initialY = e.clientY - waveformWindow.offsetTop;
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+                waveformWindow.style.left = currentX + 'px';
+                waveformWindow.style.top = currentY + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', function() {
+            isDragging = false;
+        });
+    </script>
+</body>
+</html>

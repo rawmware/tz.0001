@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Hand Representation with Labels</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+       
+        /* Container for the spinner with border */
+        .spinner-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 80px; /* Adjusted to include border */
+            height: 80px; /* Adjusted to include border */
+            border: 2px solid #000; /* Border around the container */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0); /* Background color of the container */
+            cursor: pointer; /* Indicate it's clickable */
+        }
+
+
+
+
+
+
+
+
+        /* Spinner styles */
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 2px solid transparent;
+            border-top: 2px solid #000; /* Color of the spinner */
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+
+
+
+
+
+
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+
+
+
+
+
+
+
+        /* Hide the file input */
+        #fileInput {
+            display: none;
+        }
+
+
+
+
+
+
+
+
+     
+
+
+
+
+
+
+
+
+        /* Updated container for the shuriken animation grid */
+        .shuriken-container {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            width: 150px; /* Container width */
+            height: 150px; /* Container height */
+            padding: 10px; /* Padding to prevent overflow */
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 2px; /* Space between shurikens */
+            border: 2px solid black;
+            background-color: rgba(255, 255, 255, 0); /* Transparent background */
+            box-sizing: border-box; /* Include padding and border in element's total width and height */
+        }
+
+
+
+
+        /* Shuriken styles */
+        .shuriken-1 {
+            width: 30px; /* Adjusted size for smaller grid */
+            height: 30px;
+            background: black; /* Shuriken color set to black */
+            clip-path: polygon(100.00% 50.00%, 64.14% 64.14%, 50.00% 100.00%, 35.86% 64.14%, 0.00% 50.00%, 35.86% 35.86%, 50.00% 0.00%, 64.14% 35.86%);
+            -webkit-mask: radial-gradient(circle 2px, #0000 90%, #000); /* Adjusted mask size */
+            animation: sh1 1.5s infinite linear;
+        }
+
+
+
+
+        @keyframes sh1 {
+            100% { transform: rotate(1turn); }
+        }
+
+
+
+
+        .shuriken-3 {
+            width: 30px; /* Adjusted size for smaller grid */
+            height: 30px;
+            display: grid;
+            color: black; /* Shuriken color set to black */
+            -webkit-mask: radial-gradient(circle 2px, #0000 90%, #000); /* Adjusted mask size */
+            animation: sh3 1.5s infinite linear;
+        }
+
+
+
+
+        .shuriken-3:before,
+        .shuriken-3:after {
+            content: "";
+            grid-area: 1/1;
+            background:
+                radial-gradient(farthest-side at bottom left, currentColor 94%, #0000) top left,
+                radial-gradient(farthest-side at top right, currentColor 94%, #0000) bottom right;
+            background-size: 63% 50%; /* Adjusted background size */
+            background-repeat: no-repeat;
+            -webkit-mask:
+                radial-gradient(65% 110% at bottom left, #0000 94%, #000) top left,
+                radial-gradient(65% 110% at top right, #0000 94%, #000) bottom right;
+            -webkit-mask-size: 62% 50%; /* Adjusted mask size */
+            -webkit-mask-repeat: no-repeat;
+        }
+
+
+
+
+        .shuriken-3:after {
+            transform: rotate(90deg);
+        }
+
+
+
+
+        @keyframes sh3 {
+            100% { transform: rotate(1turn); }
+        }
+
+        /* New window for 3D spheres */
+        .sphere-window {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 90px;
+            height: 60px;
+            padding: 2px;
+            background-color: rgba(255, 255, 255, 0); /* Transparent background */
+            border: 2px solid black;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <div class="spinner-container" onclick="document.getElementById('fileInput').click();">
+        <div class="spinner"></div> <!-- Spinner element -->
+    </div>
+    <input type="file" id="fileInput" accept="image/*" onchange="uploadImage(event)">
+
+    <!-- New window for 3D spheres -->
+    <div class="sphere-window" id="sphereWindow"></div>
+
+    <!-- Updated shuriken animation grid -->
+    <div class="shuriken-container">
+        <div class="shuriken-1"></div>
+        <div class="shuriken-3"></div>
+        <div class="shuriken-1"></div>
+        <div class="shuriken-3"></div>
+        <div class="shuriken-1"></div>
+        <div class="shuriken-3"></div>
+        <div class="shuriken-1"></div>
+        <div class="shuriken-3"></div>
+        <div class="shuriken-1"></div>
+        <div class="shuriken-3"></div>
+        <div class="shuriken-1"></div>
+        <div class="shuriken-3"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff); // Initial white background
+
+
+
+
+
+
+
+
+        // Camera setup
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100000); // Adjust FOV for better view
+        camera.position.z = 30; // Adjust camera position to center the animation
+        camera.position.y = 5;
+        camera.position.x = 2;
+
+
+
+
+
+
+
+
+        // Renderer setup
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio); // Increase pixel ratio for better quality
+        document.body.appendChild(renderer.domElement);
+
+
+
+
+
+
+
+
+        // Wireframe material for spheres and black color for lines
+        const wireframeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 1 }); // Increased line thickness
+
+
+
+
+
+
+
+
+        // Geometry for low-poly joints (small wireframe spheres)
+        const sphereGeometry = new THREE.SphereGeometry(0.5, 3, 3); // Smaller low-poly sphere
+
+
+
+
+
+
+
+
+        // Array to store joint positions and spheres
+        const spheres = [];
+
+
+
+
+
+
+
+
+        // Define hand joint positions, stretched out (3D coordinates for a hand model)
+        const jointPositions = [
+            // Palm
+            [0, -1, 0], [-4, 2, 0], [3, 2, 0], [-0, 6, 0], [2, 6, 0],
+            // Thumb
+            [4, 4, 1], [6, 6, 2], [8, 8, 3],
+            // Index
+            [2.5, 9, 0], [2.5, 11, 0], [3, 13, 0], [3.5, 15, 0],
+            // Middle
+            [0, 10, 0], [0, 12, 0], [0, 15, 0], [0, 18, 0],
+            // Ring
+            [-3, 10, 0], [-3.5, 12, 0], [-4, 14, 0], [-4.5, 16, 0],
+            // Pinky (shortened and adjusted height)
+            [-5, 6, 0], [-5.5, 8, 0], [-6, 10, 0], [-6.5, 12, 0] // Adjusted positions for a shorter pinky
+        ];
+
+
+
+
+
+
+
+
+        // Label names for each joint
+        const jointNames = [
+            // Palm
+            "Palm 0", "Palm 1", "Palm 2", "Palm 3", "Palm 4",
+            // Thumb
+            "Thumb 1", "Thumb 2", "Thumb 3",
+            // Index
+            "Index 1", "Index 2", "Index 3", "Index 4",
+            // Middle
+            "Middle 1", "Middle 2", "Middle 3", "Middle 4",
+            // Ring
+            "Ring 1", "Ring 2", "Ring 3", "Ring 4",
+            // Pinky
+            "Pinky 1", "Pinky 2", "Pinky 3", "Pinky 4"
+        ];
+
+
+
+
+
+
+
+
+        // Array to store label sprites
+        const labels = [];
+
+
+
+
+
+
+
+
+        // Create spheres for joints and label them
+        jointPositions.forEach((position, index) => {
+            // Create and add the sphere for the joint
+            const sphere = new THREE.Mesh(sphereGeometry, wireframeMaterial);
+            sphere.position.set(position[0], position[1], position[2]);
+            spheres.push(sphere);
+            scene.add(sphere);
+
+
+
+
+
+
+
+
+            // Create label for the joint
+            const spriteMaterial = new THREE.SpriteMaterial({
+                map: createTextTexture(jointNames[index]), // Create text texture for the label
+                transparent: true
+            });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(4, 2, 1);  // Set the size of the label
+            sprite.position.set(position[0], position[1] + 0.8, position[2]); // Position the label slightly above the sphere
+            scene.add(sprite);
+           
+            // Store the label sprite for later updates
+            labels.push(sprite);
+        });
+
+
+
+
+
+
+
+
+        // Function to create text texture for labels
+        function createTextTexture(text, color = new THREE.Color('black')) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 128;
+            context.fillStyle = 'rgba(255, 255, 255, 0)';  // Transparent background
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.font = '36px Arial';
+
+            // Add glow effect by drawing the text multiple times with a shadow
+            context.shadowColor = `rgba(${color.r * 255}, ${color.g * 255}, ${color.b * 255}, 0.5)`; // Shadow color
+            context.shadowBlur = 10; // Amount of blur for the glow effect
+            context.fillStyle = `rgb(${color.r * 255}, ${color.g * 255}, ${color.b * 255})`;  // Use the provided color
+            context.fillText(text, 50, 75);  // Position the text in the middle
+
+            const texture = new THREE.CanvasTexture(canvas);
+            return texture;
+        }
+
+
+
+
+
+
+
+
+        // Store line objects for animation
+        let lines = [];
+        const segments = 15; // Number of segments for the wavy lines
+        const amplitude = .3; // Reduced amplitude of the wave for less oscillation
+        const frequency = -500; // Frequency of the wave
+        let time = 0; // Time variable for oscillation
+
+
+
+
+
+
+
+
+        // Maximum number of lines to create
+        const maxLines = 120; // Control the number of lines
+
+
+
+
+
+
+
+
+        // Maximum number of lines per joint pair
+        const maxLinesPerPair = 10; // Maximum lines between each pair of joints
+
+
+
+
+
+
+
+
+        // Variable to control the switching interval
+        let switchInterval = 0;
+        const switchThreshold = .1; // Adjust this value to control the speed of switching
+
+
+
+
+
+
+
+
+        // Function to create lines connecting specified joints
+        function createLines() {
+            lines.forEach(line => scene.remove(line.line));
+            lines = [];
+
+
+
+
+
+
+
+
+            // Create lines only between the first 'maxLines' pairs of joints
+            for (let i = 0; i < Math.min(maxLines, spheres.length); i++) {
+                for (let j = i + 1; j < spheres.length; j++) {
+                    if (lines.length >= maxLines) break; // Stop if we reach the max number of lines
+
+
+
+
+
+
+
+
+                    // Create multiple lines between the two joints
+                    for (let k = 0; k < 3; k++) { // Always create 3 lines initially
+                        const lineGeometry = new THREE.BufferGeometry();
+                        const points = new Float32Array((segments + 1) * 3);
+                        lineGeometry.setAttribute('position', new THREE.BufferAttribute(points, 3));
+                        const line = new THREE.Line(lineGeometry, lineMaterial);
+                        lines.push({ line, object1: spheres[i], object2: spheres[j], index: k });
+                        scene.add(line);
+                    }
+                }
+            }
+
+
+
+
+
+
+
+
+            // Create additional wavy lines specifically between "Middle 4" and "Palm 0"
+            const middle4Index = 12; // Index for "Middle 4"
+            const palm0Index = 0; // Index for "Palm 0"
+            for (let k = 0; k < 3; k++) { // Always create 3 lines initially
+                const lineGeometry = new THREE.BufferGeometry();
+                const points = new Float32Array((segments + 1) * 3);
+                lineGeometry.setAttribute('position', new THREE.BufferAttribute(points, 3));
+                const line = new THREE.Line(lineGeometry, lineMaterial);
+                lines.push({ line, object1: spheres[middle4Index], object2: spheres[palm0Index], index: k });
+                scene.add(line);
+            }
+        }
+
+
+
+
+
+
+
+
+        // Function to create a wavy line between two points
+        function createWavyLine(x1, y1, z1, x2, y2, z2, segments, amplitude, frequency, time) {
+            const positions = [];
+            for (let i = 0; i <= segments; i++) {
+                const t = i / segments;
+                const x = THREE.MathUtils.lerp(x1, x2, t);
+                const y = THREE.MathUtils.lerp(y1, y2, t);
+                const z = THREE.MathUtils.lerp(z1, z2, t);
+
+
+
+
+
+
+
+
+                const waveY = y + Math.sin(time + t * frequency) * amplitude; // Oscillation effect
+                positions.push(x, waveY, z);
+            }
+            return positions;
+        }
+
+
+
+
+
+
+
+
+        // Store the original positions of the specified joints for animation
+        const originalPositions = {
+            "Pinky 4": spheres[22].position.clone(),
+            "Ring 4": spheres[17].position.clone(),
+            "Index 4": spheres[11].position.clone(),
+            "Thumb 3": spheres[7].position.clone()
+        };
+
+
+
+
+
+
+
+
+        // Animation parameters
+        const stretchAmount = 0.6; // Amount to stretch the fingers
+        const stretchDuration = 1000; // Duration of the stretch animation in milliseconds
+        let stretchDirection = 1; // 1 for stretching up, -1 for returning down
+
+
+
+
+
+
+
+
+        // Rotation parameters
+        let rotationAngle = 0; // Initial rotation angle
+        const rotationStep = 0.01; // Amount to rotate each frame
+        const maxRotationAngle = Math.PI / 14; // Maximum rotation angle (45 degrees)
+
+
+
+
+
+
+
+
+        // Rotation direction: 1 for clockwise, -1 for counterclockwise
+        let rotationDirection = 1;
+
+
+
+
+
+
+
+
+        // Function to animate specified joints
+        function animateFingers() {
+            Object.keys(originalPositions).forEach(key => {
+                const sphere = spheres[{
+                    "Pinky 4": 22,
+                    "Ring 4": 17,
+                    "Index 4": 11,
+                    "Thumb 3": 7
+                }[key]];
+
+
+
+
+
+
+
+
+                // Update Y position for stretching effect
+                sphere.position.y += stretchDirection * stretchAmount * 0.01; // Adjust the factor for speed
+               
+                // Rotate the sphere clockwise
+                sphere.rotation.y -= 0.01; // Adjust the rotation speed as needed
+            });
+
+
+
+
+
+
+
+
+            // Reverse direction if the stretch limit is reached
+            if (stretchDirection === 1 && spheres[22].position.y >= originalPositions["Pinky 4"].y + stretchAmount) {
+                stretchDirection = -1;
+            } else if (stretchDirection === -1 && spheres[22].position.y <= originalPositions["Pinky 4"].y) {
+                stretchDirection = 1;
+            }
+        }
+
+
+
+
+
+
+
+
+        // Function to rotate the entire hand model
+        function rotateHand() {
+            // Update rotation angle based on direction
+            rotationAngle += rotationDirection * rotationStep;
+
+
+
+
+
+
+
+
+            // Reverse direction if the max rotation angle is reached
+            if (rotationAngle >= maxRotationAngle || rotationAngle <= -maxRotationAngle) {
+                rotationDirection *= -1; // Change direction
+            }
+
+
+
+
+
+
+
+
+            scene.rotation.y = rotationAngle; // Apply rotation to the scene
+        }
+
+
+
+
+
+
+
+
+        // Function to animate the lines
+        function animateLines() {
+            // Increment the switch interval counter
+            switchInterval++;
+
+
+
+
+
+
+
+
+            // Only switch the number of lines every 'switchThreshold' frames
+            if (switchInterval >= switchThreshold) {
+                switchInterval = 0; // Reset the counter
+
+
+
+
+
+
+
+
+                // Randomly decide the number of lines between 2 and 3
+                const randomLinesPerPair = Math.floor(Math.random() * 2) + 10; // Randomly 2 or 3
+
+
+
+
+
+
+
+
+                lines.forEach(({ line, object1, object2, index }) => {
+                    if (index < randomLinesPerPair) { // Only update lines that are within the random count
+                        const positions = createWavyLine(
+                            object1.position.x, object1.position.y, object1.position.z,
+                            object2.position.x, object2.position.y, object2.position.z,
+                            segments, amplitude, frequency, time + index // Offset time for each line
+                        );
+                        line.geometry.attributes.position.array.set(positions);
+                        line.geometry.attributes.position.needsUpdate = true; // Update the geometry
+                        if (!scene.children.includes(line)) {
+                            scene.add(line); // Add the line if it's not already in the scene
+                        }
+                    } else {
+                        scene.remove(line); // Remove lines that exceed the random count
+                    }
+                });
+            }
+        }
+
+
+
+
+
+
+
+
+        // Function to generate a rainbow color based on a given index
+        function getRainbowColor(index, total) {
+            const hue = (index / total) * 360; // Calculate hue based on index
+            return new THREE.Color(`hsl(${hue}, 100%, 50%)`); // Return color in HSL format
+        }
+
+
+
+
+
+
+
+
+        // Function to generate a rainbow color based on a given index and time
+        function getAnimatedTextColor(index, total, time) {
+            const hue = ((index / total) * 360 + time * 10) % 360; // Animate hue over time
+            const lightness = 70; // Set a high lightness value for brighter colors
+            return new THREE.Color(`hsl(${hue}, 100%, ${lightness}%)`); // Return color in HSL format
+        }
+
+
+
+
+
+
+
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.2; // Increase time increment for faster oscillation
+
+            // Rotate all spheres clockwise and update their colors
+            spheres.forEach((sphere, index) => {
+                sphere.rotation.y -= 0.1; // Reduce rotation speed of each sphere
+
+                // Update label color to create a rainbow effect
+                const labelColor = getRainbowColor(index, spheres.length);
+                labels[index].material.color.copy(labelColor); // Update the color of the label
+
+                // Animate text color
+                const textColor = getAnimatedTextColor(index, spheres.length, time);
+                labels[index].material.map = createTextTexture(jointNames[index], textColor); // Update text texture with new color
+
+                // Update label position to follow the sphere
+                labels[index].position.set(sphere.position.x, sphere.position.y + 0.8, sphere.position.z); // Update label position
+            });
+
+            // Animate lines
+            animateLines();
+            // Animate fingers
+            animateFingers();
+            // Rotate hand
+            rotateHand();
+
+            // Render the scene
+            renderer.render(scene, camera);
+        }
+
+        // Call createLines initially to set up the lines
+        createLines();
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setPixelRatio(window.devicePixelRatio); // Ensure pixel ratio is updated on resize
+        });
+
+        // Function to handle image upload
+        function uploadImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const texture = new THREE.TextureLoader().load(e.target.result);
+                    scene.background = texture; // Set the uploaded image as the background
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Setup for the new 3D spheres
+        const sphereWindow = document.getElementById('sphereWindow');
+        const sphereScene = new THREE.Scene();
+        const sphereCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+        sphereCamera.position.z = 9; // Adjusted camera position
+
+        const sphereRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        sphereRenderer.setSize(60, 60);
+        sphereWindow.appendChild(sphereRenderer.domElement);
+
+        const smallSphereGeometry = new THREE.SphereGeometry(1, 5, 5); // Larger low poly sphere
+        const smallSpheres = [];
+        const speedFactor = 0.3; // Adjusted speed factor for controlled movement
+
+        for (let i = 0; i < 3; i++) {
+            const colorMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const wireframeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
+
+            const sphere = new THREE.Mesh(smallSphereGeometry, colorMaterial);
+            const wireframe = new THREE.Mesh(smallSphereGeometry, wireframeMaterial);
+
+            // Spread out initial positions more
+            sphere.position.set((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+            wireframe.position.copy(sphere.position);
+
+            // Use speedFactor to control velocity
+            smallSpheres.push({ sphere, wireframe, velocity: new THREE.Vector3((Math.random() * 0.3 - 0.15) * speedFactor, (Math.random() * 0.3 - 0.15) * speedFactor, (Math.random() * 0.3 - 0.15) * speedFactor) });
+            sphereScene.add(sphere);
+            sphereScene.add(wireframe);
+        }
+
+        // Function to detect and handle collisions between spheres
+        function handleCollisions() {
+            for (let i = 0; i < smallSpheres.length; i++) {
+                for (let j = i + 1; j < smallSpheres.length; j++) {
+                    const sphere1 = smallSpheres[i];
+                    const sphere2 = smallSpheres[j];
+
+                    const distance = sphere1.sphere.position.distanceTo(sphere2.sphere.position);
+                    const minDistance = 2; // Diameter of the spheres
+
+                    if (distance < minDistance) {
+                        const normal = new THREE.Vector3().subVectors(sphere1.sphere.position, sphere2.sphere.position).normalize();
+                        const relativeVelocity = new THREE.Vector3().subVectors(sphere1.velocity, sphere2.velocity);
+                        const speed = relativeVelocity.dot(normal);
+
+                        if (speed < 0) {
+                            const impulse = normal.multiplyScalar(speed);
+                            sphere1.velocity.sub(impulse);
+                            sphere2.velocity.add(impulse);
+
+                            // Change color on collision
+                            sphere1.sphere.material.color.setHSL(Math.random(), 1, 0.5);
+                            sphere2.sphere.material.color.setHSL(Math.random(), 1, 0.5);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Function to animate spheres
+        function animateSpheres() {
+            requestAnimationFrame(animateSpheres);
+            handleCollisions();
+            smallSpheres.forEach(({ sphere, wireframe, velocity }, index) => {
+                sphere.rotation.x += 0.01;
+                sphere.rotation.y += 0.01;
+                wireframe.rotation.x += 0.01;
+                wireframe.rotation.y += 0.01;
+
+                // Update position for faster floating effect
+                sphere.position.add(velocity);
+                wireframe.position.copy(sphere.position);
+
+                // Bounce off the walls with a larger boundary
+                ['x', 'y', 'z'].forEach(axis => {
+                    if (sphere.position[axis] > 3 || sphere.position[axis] < -3) {
+                        velocity[axis] = -velocity[axis];
+                    }
+                });
+
+                // Speed up color change effect
+                const hue = (index / smallSpheres.length) * 360 + Date.now() * 0.02;
+                sphere.material.color.setHSL(hue / 360, 1, 0.5);
+            });
+            sphereRenderer.render(sphereScene, sphereCamera);
+        }
+
+        animateSpheres();
+    </script>
+</body>
+</html>

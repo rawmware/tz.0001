@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>WebGL Metaballs - Rainbow</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: black; background-size: cover !important; background-position: center center !important; background-repeat: no-repeat !important; width: 100vw; height: 100vh; }
+        canvas { width: 100vw; height: 100vh; display: block; position: fixed; top: 0; left: 0; }
+        .controls {
+            display: none;
+            position: absolute;
+            top: 50px;
+            left: 10px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #rawmwareWindow {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 250px;
+            height: 250px;
+            border: 2px solid #ffffff;
+            background-color: rgb(0, 0, 0);
+            overflow: hidden;
+            z-index: 1000;
+        }
+
+        .window-title-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            background-color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 5px;
+            box-sizing: border-box;
+            color: #000000;
+            font-size: 25px;
+        }
+
+        .window-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .window-button {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-size: 10px;
+            font-weight: bold;
+            animation: rainbowColor 3s infinite alternate;
+            font-family: "MS Gothic", "Yu Gothic", sans-serif;
+            line-height: 15px;
+            text-align: center;
+        }
+
+        @keyframes rainbowColor {
+            0% { background-color: red; }
+            20% { background-color: orange; }
+            40% { background-color: yellow; }
+            60% { background-color: green; }
+            80% { background-color: blue; }
+            100% { background-color: violet; }
+        }
+
+        #rawmwareWindow.active .controls {
+            display: block;
+        }
+
+        #imageWindow {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            border: 2px solid #ffffff;
+            background-color: rgb(0, 0, 0);
+            overflow: hidden;
+            z-index: 1000;
+        }
+
+        .image-upload {
+            display: none;
+            padding: 10px;
+            color: white;
+            text-align: center;
+        }
+
+        #imageWindow.active .image-upload {
+            display: block;
+        }
+
+        .upload-btn {
+            background: #ffffff;
+            color: #000000;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin: 10px auto;
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        .upload-btn:hover {
+            background: #cccccc;
+        }
+
+        #imagePreview {
+            max-width: 100px;
+            max-height: 100px;
+            margin: 5px auto;
+            display: none;
+        }
+
+        #imageWindow .window-title-bar {
+            font-size: 14px;
+            height: 20px;
+        }
+
+        #imageWindow .window-button {
+            width: 12px;
+            height: 12px;
+            font-size: 8px;
+            line-height: 12px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="rawmwareWindow">
+        <div class="window-title-bar">
+            Rawmware.OS
+            <div class="window-buttons">
+                <div class="window-button minimize">+</div>
+                <div class="window-button maximize">-</div>
+                <div class="window-button close">x</div>
+            </div>
+        </div>
+        <div class="controls">
+            <div>Blobs: <span id="blobCount">3</span></div>
+            <input type="range" min="1" max="10" value="3" id="blobSlider">
+            <div>Resolution: <span id="resolutionCount">20</span></div>
+            <input type="range" min="10" max="40" value="20" id="resolutionSlider">
+        </div>
+    </div>
+    <div id="imageWindow">
+        <div class="window-title-bar">
+            Background
+            <div class="window-buttons">
+                <div class="window-button minimize">+</div>
+                <div class="window-button maximize">-</div>
+                <div class="window-button close">x</div>
+            </div>
+        </div>
+        <div class="image-upload">
+            <label for="bgImage" class="upload-btn">Choose Image</label>
+            <input type="file" id="bgImage" accept="image/*" style="display: none;">
+            <img id="imagePreview">
+        </div>
+    </div>
+
+<script>
+const canvas = document.querySelector('#canvas');
+const gl = canvas.getContext('webgl');
+
+if (!gl) {
+    alert('WebGL not supported');
+    throw new Error('WebGL not supported');
+}
+
+// Vertex shader
+const vertexShaderSource = `
+    attribute vec3 position;
+    attribute vec3 normal;
+    
+    uniform mat4 modelViewMatrix;
+    uniform mat4 projectionMatrix;
+    
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+    
+    void main() {
+        vNormal = normal;
+        vPosition = position;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+`;
+
+// Fragment shader
+const fragmentShaderSource = `
+    precision mediump float;
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+    uniform float uTime;
+    uniform sampler2D uBackgroundTexture;
+    uniform bool uHasBackground;
+    
+    vec3 hsv2rgb(vec3 c) {
+        vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+        vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+        return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+    }
+    
+    void main() {
+        vec2 screenCoord = gl_FragCoord.xy / vec2(${canvas.width}.0, ${canvas.height}.0);
+        vec4 bgColor = uHasBackground ? texture2D(uBackgroundTexture, screenCoord) : vec4(0.0, 0.0, 0.0, 1.0);
+
+        vec3 light = normalize(vec3(1.0, 1.0, 1.0));
+        float intensity = max(dot(vNormal, light), 0.0);
+        float hue = fract(uTime * 0.1 + vPosition.x * 0.1 + vPosition.y * 0.1);
+        vec3 color = hsv2rgb(vec3(hue, 0.8, 1.0));
+        
+        gl_FragColor = vec4(color * (intensity * 0.8 + 0.2), 1.0);
+    }
+`;
+
+// Compile shader
+function createShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+    }
+    return shader;
+}
+
+// Create shader program
+const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+const program = gl.createProgram();
+gl.attachShader(program, vertexShader);
+gl.attachShader(program, fragmentShader);
+gl.linkProgram(program);
+
+if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.error(gl.getProgramInfoLog(program));
+    throw new Error('Failed to link program');
+}
+
+// Get attribute and uniform locations
+const positionLocation = gl.getAttribLocation(program, 'position');
+const normalLocation = gl.getAttribLocation(program, 'normal');
+const modelViewMatrixLocation = gl.getUniformLocation(program, 'modelViewMatrix');
+const projectionMatrixLocation = gl.getUniformLocation(program, 'projectionMatrix');
+const timeLocation = gl.getUniformLocation(program, 'uTime');
+const hasBackgroundLocation = gl.getUniformLocation(program, 'uHasBackground');
+const backgroundTextureLocation = gl.getUniformLocation(program, 'uBackgroundTexture');
+
+// Create buffers
+const positionBuffer = gl.createBuffer();
+const normalBuffer = gl.createBuffer();
+const indexBuffer = gl.createBuffer();
+
+// Metaball class
+class Metaball {
+    constructor() {
+        this.reset();
+    }
+
+    reset() {
+        this.position = {
+            x: (Math.random() - 0.5) * 3,
+            y: (Math.random() - 0.5) * 3,
+            z: (Math.random() - 0.5) * 3
+        };
+        this.velocity = {
+            x: (Math.random() - 0.5) * 0.1,
+            y: (Math.random() - 0.5) * 0.1,
+            z: (Math.random() - 0.5) * 0.1
+        };
+        this.radius = 0.5 + Math.random() * 0.5;
+    }
+
+    update() {
+        this.position.x += this.velocity.x;
+        this.position.y += this.velocity.y;
+        this.position.z += this.velocity.z;
+
+        if (Math.abs(this.position.x) > 2) this.velocity.x *= -1;
+        if (Math.abs(this.position.y) > 2) this.velocity.y *= -1;
+        if (Math.abs(this.position.z) > 2) this.velocity.z *= -1;
+    }
+}
+
+// Create metaballs
+let metaballs = Array(3).fill(null).map(() => new Metaball());
+
+// Marching cubes implementation
+let GRID_SIZE = 20;
+const CELL_SIZE = 4 / GRID_SIZE;
+
+function calculateDensity(x, y, z) {
+    let density = 0;
+    for (const ball of metaballs) {
+        const dx = x - ball.position.x;
+        const dy = y - ball.position.y;
+        const dz = z - ball.position.z;
+        const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        density += ball.radius * ball.radius / (distance * distance);
+    }
+    return density;
+}
+
+function generateGeometry() {
+    const positions = [];
+    const normals = [];
+    const indices = [];
+    let vertexIndex = 0;
+
+    for (let x = 0; x < GRID_SIZE; x++) {
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let z = 0; z < GRID_SIZE; z++) {
+                const px = (x / GRID_SIZE) * 4 - 2;
+                const py = (y / GRID_SIZE) * 4 - 2;
+                const pz = (z / GRID_SIZE) * 4 - 2;
+
+                const density = calculateDensity(px, py, pz);
+                
+                if (density > 1) {
+                    // Add cube vertices
+                    const size = CELL_SIZE * 0.5;
+                    
+                    // Calculate normal
+                    const eps = 0.01;
+                    const nx = calculateDensity(px + eps, py, pz) - calculateDensity(px - eps, py, pz);
+                    const ny = calculateDensity(px, py + eps, pz) - calculateDensity(px, py - eps, pz);
+                    const nz = calculateDensity(px, py, pz + eps) - calculateDensity(px, py, pz - eps);
+                    const len = Math.sqrt(nx*nx + ny*ny + nz*nz);
+                    
+                    // Add vertex data for a cube
+                    positions.push(
+                        px-size, py-size, pz-size,
+                        px+size, py-size, pz-size,
+                        px+size, py+size, pz-size,
+                        px-size, py+size, pz-size,
+                        px-size, py-size, pz+size,
+                        px+size, py-size, pz+size,
+                        px+size, py+size, pz+size,
+                        px-size, py+size, pz+size
+                    );
+
+                    // Add normal data
+                    for (let i = 0; i < 8; i++) {
+                        normals.push(nx/len, ny/len, nz/len);
+                    }
+
+                    // Add indices for cube
+                    indices.push(
+                        vertexIndex+0, vertexIndex+1, vertexIndex+2,
+                        vertexIndex+0, vertexIndex+2, vertexIndex+3,
+                        vertexIndex+1, vertexIndex+5, vertexIndex+6,
+                        vertexIndex+1, vertexIndex+6, vertexIndex+2,
+                        vertexIndex+5, vertexIndex+4, vertexIndex+7,
+                        vertexIndex+5, vertexIndex+7, vertexIndex+6,
+                        vertexIndex+4, vertexIndex+0, vertexIndex+3,
+                        vertexIndex+4, vertexIndex+3, vertexIndex+7,
+                        vertexIndex+3, vertexIndex+2, vertexIndex+6,
+                        vertexIndex+3, vertexIndex+6, vertexIndex+7,
+                        vertexIndex+4, vertexIndex+5, vertexIndex+1,
+                        vertexIndex+4, vertexIndex+1, vertexIndex+0
+                    );
+                    
+                    vertexIndex += 8;
+                }
+            }
+        }
+    }
+
+    return { positions, normals, indices };
+}
+
+// Fixed camera settings
+const camera = {
+    distance: 15,  // Closer camera position
+    rotation: {
+        x: 0.3,   // Slight tilt down
+        y: 0      // Will be automatically rotated
+    },
+    rotationSpeed: 0.3  // Slower rotation speed
+};
+
+// Add background image handling
+let backgroundTexture = null;
+
+document.getElementById('imageWindow').addEventListener('click', function(e) {
+    if (!e.target.classList.contains('window-button')) {
+        this.classList.toggle('active');
+    }
+});
+
+document.getElementById('bgImage').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const image = new Image();
+            image.onload = function() {
+                // Update canvas background
+                document.body.style.background = `black url(${e.target.result})`;
+                document.body.style.backgroundSize = 'cover';
+                document.body.style.backgroundPosition = 'center';
+                document.body.style.backgroundRepeat = 'no-repeat';
+                
+                // Show preview
+                document.getElementById('imagePreview').src = e.target.result;
+                document.getElementById('imagePreview').style.display = 'block';
+            };
+            image.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Add a window resize handler
+window.addEventListener('resize', function() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+});
+
+// Update render function
+function render(time) {
+    time *= 0.001;
+
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+
+    // Clear with transparent black to show background
+    gl.clearColor(0.0, 0.0, 0.0, 0.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    gl.enable(gl.DEPTH_TEST);
+
+    metaballs.forEach(ball => ball.update());
+
+    const geometry = generateGeometry();
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometry.positions), gl.STATIC_DRAW);
+    
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometry.normals), gl.STATIC_DRAW);
+    
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(geometry.indices), gl.STATIC_DRAW);
+
+    gl.useProgram(program);
+
+    // Pass time to shader for rainbow effect
+    gl.uniform1f(timeLocation, time);
+
+    const projectionMatrix = new Float32Array(16);
+    const modelViewMatrix = new Float32Array(16);
+    
+    const aspect = canvas.width / canvas.height;
+    mat4Perspective(projectionMatrix, 45 * Math.PI / 180, aspect, 0.1, 100.0);
+    
+    // Fixed camera position with auto-rotation
+    mat4Identity(modelViewMatrix);
+    mat4Translate(modelViewMatrix, modelViewMatrix, [0, 0, -camera.distance]);
+    mat4Rotate(modelViewMatrix, modelViewMatrix, camera.rotation.x, [1, 0, 0]);
+    mat4Rotate(modelViewMatrix, modelViewMatrix, time * camera.rotationSpeed, [0, 1, 0]);
+
+    gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
+    gl.uniformMatrix4fv(modelViewMatrixLocation, false, modelViewMatrix);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+    gl.enableVertexAttribArray(normalLocation);
+    gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, 0, 0);
+
+    // Add before gl.drawElements:
+    gl.uniform1i(backgroundTextureLocation, 0);
+    gl.uniform1i(hasBackgroundLocation, backgroundTexture !== null ? 1 : 0);
+    
+    if (backgroundTexture) {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, backgroundTexture);
+    }
+
+    gl.drawElements(gl.TRIANGLES, geometry.indices.length, gl.UNSIGNED_SHORT, 0);
+
+    requestAnimationFrame(render);
+}
+
+// Matrix utility functions
+function mat4Perspective(out, fovy, aspect, near, far) {
+    const f = 1.0 / Math.tan(fovy / 2);
+    out[0] = f / aspect;
+    out[1] = 0;
+    out[2] = 0;
+    out[3] = 0;
+    out[4] = 0;
+    out[5] = f;
+    out[6] = 0;
+    out[7] = 0;
+    out[8] = 0;
+    out[9] = 0;
+    out[10] = (far + near) / (near - far);
+    out[11] = -1;
+    out[12] = 0;
+    out[13] = 0;
+    out[14] = (2 * far * near) / (near - far);
+    out[15] = 0;
+    return out;
+}
+
+function mat4Identity(out) {
+    out.fill(0);
+    out[0] = 1;
+    out[5] = 1;
+    out[10] = 1;
+    out[15] = 1;
+    return out;
+}
+
+function mat4Translate(out, a, v) {
+    out.set(a);
+    out[12] = a[0] * v[0] + a[4] * v[1] + a[8] * v[2] + a[12];
+    out[13] = a[1] * v[0] + a[5] * v[1] + a[9] * v[2] + a[13];
+    out[14] = a[2] * v[0] + a[6] * v[1] + a[10] * v[2] + a[14];
+    out[15] = a[3] * v[0] + a[7] * v[1] + a[11] * v[2] + a[15];
+    return out;
+}
+
+function mat4Rotate(out, a, rad, axis) {
+    let x = axis[0], y = axis[1], z = axis[2];
+    let len = Math.sqrt(x * x + y * y + z * z);
+    
+    if (len < Number.EPSILON) return null;
+    
+    len = 1 / len;
+    x *= len;
+    y *= len;
+    z *= len;
+    
+    const s = Math.sin(rad);
+    const c = Math.cos(rad);
+    const t = 1 - c;
+    
+    const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
+    const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
+    const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
+    
+    const b00 = x * x * t + c;
+    const b01 = y * x * t + z * s;
+    const b02 = z * x * t - y * s;
+    const b10 = x * y * t - z * s;
+    const b11 = y * y * t + c;
+    const b12 = z * y * t + x * s;
+    const b20 = x * z * t + y * s;
+    const b21 = y * z * t - x * s;
+    const b22 = z * z * t + c;
+    
+    out[0] = a00 * b00 + a10 * b01 + a20 * b02;
+    out[1] = a01 * b00 + a11 * b01 + a21 * b02;
+    out[2] = a02 * b00 + a12 * b01 + a22 * b02;
+    out[3] = a03 * b00 + a13 * b01 + a23 * b02;
+    out[4] = a00 * b10 + a10 * b11 + a20 * b12;
+    out[5] = a01 * b10 + a11 * b11 + a21 * b12;
+    out[6] = a02 * b10 + a12 * b11 + a22 * b12;
+    out[7] = a03 * b10 + a13 * b11 + a23 * b12;
+    out[8] = a00 * b20 + a10 * b21 + a20 * b22;
+    out[9] = a01 * b20 + a11 * b21 + a21 * b22;
+    out[10] = a02 * b20 + a12 * b21 + a22 * b22;
+    out[11] = a03 * b20 + a13 * b21 + a23 * b22;
+    
+    if (a !== out) {
+        out[12] = a[12];
+        out[13] = a[13];
+        out[14] = a[14];
+        out[15] = a[15];
+    }
+    return out;
+}
+
+// Handle blob count changes
+document.getElementById('blobSlider').addEventListener('input', (e) => {
+    const count = parseInt(e.target.value);
+    document.getElementById('blobCount').textContent = count;
+    metaballs = Array(count).fill(null).map(() => new Metaball());
+});
+
+// Add resolution slider handler
+document.getElementById('resolutionSlider').addEventListener('input', (e) => {
+    GRID_SIZE = parseInt(e.target.value);
+    document.getElementById('resolutionCount').textContent = GRID_SIZE;
+});
+
+// Add window click handler
+document.getElementById('rawmwareWindow').addEventListener('click', function(e) {
+    if (!e.target.classList.contains('window-button')) {
+        this.classList.toggle('active');
+    }
+});
+
+// Start animation
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
+                

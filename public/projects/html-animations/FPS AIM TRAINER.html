@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>3D Aim Trainer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #333333;
+            cursor: crosshair;
+        }
+        #hud {
+            position: fixed;
+            top: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            pointer-events: none;
+        }
+        #timer {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-family: Arial;
+            font-size: 24px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 20px;
+            border-radius: 15px;
+        }
+        #score {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-family: Arial;
+            font-size: 24px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 20px;
+            border-radius: 15px;
+        }
+        #accuracy {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-family: Arial;
+            font-size: 24px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 20px;
+            border-radius: 15px;
+        }
+        #menu, #settings {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(40, 40, 40, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            display: none;
+            min-width: 200px;
+        }
+        .menu-item {
+            margin: 10px 0;
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #444;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .menu-item:hover {
+            background: #555;
+        }
+        .selected {
+            background: #666;
+            font-weight: bold;
+        }
+        #start-prompt {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: Arial;
+            font-size: 24px;
+            text-align: center;
+        }
+        .color-picker {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            gap: 10px;
+            color: white;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            gap: 10px;
+            color: white;
+        }
+        .color-presets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .color-preset {
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .color-preset.selected {
+            border: 2px solid #fff;
+        }
+        .preset-label {
+            color: white;
+            margin: 10px 0 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="hud">
+        <div id="score">Score: 0</div>
+        <div id="timer">0:30</div>
+        <div id="accuracy">Accuracy: 0%</div>
+    </div>
+    <div id="start-prompt">Click to Start</div>
+    <div id="menu">
+        <div class="menu-item" onclick="toggleMenu()">Resume (M)</div>
+        <div class="menu-item" onclick="resetGame()">Reset Game</div>
+        <div class="menu-item" id="settingsButton">Settings</div>
+        <div class="menu-item selected" onclick="setMode('moving')" id="movingMode">Moving Targets</div>
+        <div class="menu-item" onclick="setMode('static')" id="staticMode">Non-Moving Targets</div>
+    </div>
+    <div id="settings">
+        <h3 style="margin-top: 0; color: white;">Settings</h3>
+        
+        <div class="preset-label">Grid Color:</div>
+        <div class="color-presets" id="gridPresets">
+            <div class="color-preset selected" style="background: #484848" data-color="#484848"></div>
+            <div class="color-preset" style="background: #2C2C2C" data-color="#2C2C2C"></div>
+            <div class="color-preset" style="background: #666666" data-color="#666666"></div>
+            <div class="color-preset" style="background: #444444" data-color="#444444"></div>
+            <div class="color-preset" style="background: #555555" data-color="#555555"></div>
+        </div>
+
+        <div class="preset-label">Target Color:</div>
+        <div class="color-presets" id="targetPresets">
+            <div class="color-preset selected" style="background: #000000" data-color="#000000"></div>
+            <div class="color-preset" style="background: #FF0000" data-color="#FF0000"></div>
+            <div class="color-preset" style="background: #00FF00" data-color="#00FF00"></div>
+            <div class="color-preset" style="background: #0000FF" data-color="#0000FF"></div>
+            <div class="color-preset" style="background: #FFFF00" data-color="#FFFF00"></div>
+        </div>
+
+        <div class="slider-container">
+            <label>Target Opacity:</label>
+            <input type="range" id="targetOpacity" min="0" max="100" value="60">
+            <span id="opacityValue">60%</span>
+        </div>
+        
+        <div class="menu-item" onclick="closeSettings()">Back to Menu</div>
+    </div>
+
+    <script>
+        let scene, camera, renderer;
+        let score = 0;
+        let shots = 0;
+        let targets = [];
+        let menuOpen = false;
+        let settingsOpen = false;
+        let isMovingMode = true;
+        let gameActive = false;
+        let timeRemaining = 30;
+        let timerInterval = null;
+        let isPaused = false;
+
+        const BOUNDS = {
+            x: 4,
+            y: 3,
+            z: 4
+        };
+
+        let settings = {
+            gridColor: '#484848',
+            targetColor: '#000000',
+            targetOpacity: 0.6
+        };
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x333333);
+
+            camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 4;
+            camera.position.y = 2;
+
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                powerPreference: "high-performance"
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = false;
+            document.body.appendChild(renderer.domElement);
+
+            createRoom();
+            setupEventListeners();
+            animate();
+        }
+
+        function createRoom() {
+            const textureSize = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = textureSize;
+            canvas.height = textureSize;
+            const ctx = canvas.getContext('2d');
+            const tileSize = 16;
+            
+            ctx.fillStyle = '#404040';
+            ctx.fillRect(0, 0, textureSize, textureSize);
+            
+            ctx.fillStyle = settings.gridColor;
+            for(let y = 0; y < textureSize; y += tileSize) {
+                for(let x = 0; x < textureSize; x += tileSize) {
+                    if((x/tileSize + y/tileSize) % 2 === 0) {
+                        ctx.fillRect(x, y, tileSize, tileSize);
+                    }
+                }
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(4, 4);
+
+            const roomGeometry = new THREE.BoxGeometry(BOUNDS.x * 2, BOUNDS.y * 2, BOUNDS.z * 2);
+            const roomMaterial = new THREE.MeshPhongMaterial({
+                map: texture,
+                side: THREE.BackSide,
+                shininess: 0
+            });
+            
+            const room = new THREE.Mesh(roomGeometry, roomMaterial);
+            room.name = 'room';
+            room.position.y = 2;
+            room.position.z = -BOUNDS.z/2;
+            scene.add(room);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+        }
+
+        function createTarget() {
+            if (targets.length >= 3) return;
+
+            const geometry = new THREE.SphereGeometry(0.2, 16, 16);
+            const material = new THREE.MeshPhongMaterial({
+                color: settings.targetColor,
+                transparent: true,
+                opacity: settings.targetOpacity,
+                shininess: 100
+            });
+            const target = new THREE.Mesh(geometry, material);
+            
+            target.position.x = (Math.random() - 0.5) * (BOUNDS.x * 1.5);
+            target.position.y = (Math.random() - 0.5) * (BOUNDS.y * 1.5) + 2;
+            target.position.z = -(Math.random() * BOUNDS.z) - 2;
+
+            const speed = 0.02 + Math.random() * 0.01;
+            target.velocity = new THREE.Vector3(
+                (Math.random() - 0.5) * speed,
+                (Math.random() - 0.5) * speed,
+                (Math.random() - 0.5) * speed * 0.5
+            );
+
+            scene.add(target);
+            targets.push(target);
+        }
+
+        function startGame() {
+            if (!gameActive) {
+                gameActive = true;
+                score = 0;
+                shots = 0;
+                timeRemaining = 30;
+                document.getElementById('start-prompt').style.display = 'none';
+                updateScore();
+                updateTimer();
+                
+                // Create initial targets
+                for(let i = 0; i < 3; i++) {
+                    createTarget();
+                }
+
+                // Start timer
+                startTimer();
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            targets.forEach(target => scene.remove(target));
+            targets = [];
+            document.getElementById('start-prompt').style.display = 'block';
+            document.getElementById('start-prompt').textContent = 
+                `GG'ez\nScore: ${score}\nAccuracy: ${((score/shots) * 100 || 0).toFixed(1)}%\nClick to Start New Round`;
+        }
+
+        function updateTimer() {
+            document.getElementById('timer').textContent = `0:${timeRemaining.toString().padStart(2, '0')}`;
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = `Score: ${score}`;
+            document.getElementById('accuracy').textContent = 
+                `Accuracy: ${((score/shots) * 100 || 0).toFixed(1)}%`;
+        }
+
+        function onMouseClick(event) {
+            if (menuOpen) return;
+            
+            if (!gameActive) {
+                startGame();
+                return;
+            }
+
+            shots++;
+            const mouse = new THREE.Vector2(
+                (event.clientX / window.innerWidth) * 2 - 1,
+                -(event.clientY / window.innerHeight) * 2 + 1
+            );
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(targets);
+            
+            if (intersects.length > 0) {
+                const clickedTarget = intersects[0].object;
+                scene.remove(clickedTarget);
+                targets = targets.filter(target => target !== clickedTarget);
+                score++;
+                createTarget();
+            }
+            
+            updateScore();
+        }
+
+        function setMode(mode) {
+            isMovingMode = mode === 'moving';
+            document.getElementById('movingMode').classList.toggle('selected', isMovingMode);
+            document.getElementById('staticMode').classList.toggle('selected', !isMovingMode);
+            resetGame();
+        }
+
+        function resetGame() {
+            // Clear existing game state
+            clearInterval(timerInterval);
+            gameActive = false;
+            score = 0;
+            shots = 0;
+            timeRemaining = 30;
+            
+            // Remove existing targets
+            targets.forEach(target => scene.remove(target));
+            targets = [];
+            
+            // Reset UI
+            updateScore();
+            updateTimer();
+            document.getElementById('start-prompt').style.display = 'block';
+            document.getElementById('start-prompt').textContent = 'Click to Start';
+            
+            if (menuOpen) {
+                toggleMenu();
+            }
+        }
+
+        function toggleMenu() {
+            if (settingsOpen) {
+                closeSettings();
+                return;
+            }
+            menuOpen = !menuOpen;
+            isPaused = menuOpen;
+            document.getElementById('menu').style.display = menuOpen ? 'block' : 'none';
+            
+            // Debug log
+            console.log('Menu:', menuOpen ? 'opened' : 'closed', 'Paused:', isPaused);
+        }
+
+        function showSettings() {
+            settingsOpen = true;
+            menuOpen = false;
+            isPaused = true;
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('settings').style.display = 'block';
+            
+            // Debug log
+            console.log('Settings opened, Paused:', isPaused);
+        }
+
+        function closeSettings() {
+            settingsOpen = false;
+            menuOpen = true;
+            isPaused = true;
+            document.getElementById('settings').style.display = 'none';
+            document.getElementById('menu').style.display = 'block';
+        }
+
+        function updateColors() {
+            // Update existing targets
+            targets.forEach(target => {
+                if (target && target.material) {
+                    target.material.color.setStyle(settings.targetColor);
+                    target.material.opacity = settings.targetOpacity;
+                }
+            });
+
+            // Recreate room with new grid color
+            const room = scene.getObjectByName('room');
+            if (room) {
+                scene.remove(room);
+            }
+            createRoom();
+        }
+
+        function setupEventListeners() {
+            window.addEventListener('click', onMouseClick);
+            window.addEventListener('resize', onWindowResize);
+            
+            // Settings button
+            const settingsButton = document.getElementById('settingsButton');
+            if (settingsButton) {
+                settingsButton.addEventListener('click', showSettings);
+            }
+
+            // Color presets
+            document.querySelectorAll('#gridPresets .color-preset').forEach(preset => {
+                preset.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent click from bubbling
+                    document.querySelectorAll('#gridPresets .color-preset')
+                        .forEach(p => p.classList.remove('selected'));
+                    e.target.classList.add('selected');
+                    settings.gridColor = e.target.dataset.color;
+                    updateColors();
+                });
+            });
+
+            document.querySelectorAll('#targetPresets .color-preset').forEach(preset => {
+                preset.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent click from bubbling
+                    document.querySelectorAll('#targetPresets .color-preset')
+                        .forEach(p => p.classList.remove('selected'));
+                    e.target.classList.add('selected');
+                    settings.targetColor = e.target.dataset.color;
+                    updateColors();
+                });
+            });
+
+            // Opacity slider
+            const opacitySlider = document.getElementById('targetOpacity');
+            if (opacitySlider) {
+                opacitySlider.addEventListener('input', (e) => {
+                    settings.targetOpacity = e.target.value / 100;
+                    const opacityValue = document.getElementById('opacityValue');
+                    if (opacityValue) {
+                        opacityValue.textContent = e.target.value + '%';
+                    }
+                    updateColors();
+                });
+            }
+
+            // Menu key
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'm' || e.key === 'M') {
+                    if (settingsOpen) {
+                        closeSettings();
+                    } else {
+                        toggleMenu();
+                    }
+                }
+            });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        let lastTime = performance.now();
+        let frameCount = 0;
+
+        function updateFPS() {
+            frameCount++;
+            const currentTime = performance.now();
+            const delta = currentTime - lastTime;
+
+            if (delta >= 1000) {
+                const fps = Math.round((frameCount * 1000) / delta);
+                document.getElementById('accuracy').textContent = 
+                    `FPS: ${fps} | Accuracy: ${((score/shots) * 100 || 0).toFixed(1)}%`;
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (!isPaused && gameActive) {
+                    timeRemaining--;
+                    updateTimer();
+                    if (timeRemaining <= 0) {
+                        endGame();
+                    }
+                }
+            }, 1000);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (!menuOpen && !settingsOpen && gameActive) {
+                targets.forEach(target => {
+                    if (isMovingMode) {
+                        target.position.add(target.velocity);
+                        
+                        if (Math.abs(target.position.x) > BOUNDS.x) {
+                            target.velocity.x *= -1;
+                            target.position.x = Math.sign(target.position.x) * BOUNDS.x;
+                        }
+                        if (Math.abs(target.position.y - 2) > BOUNDS.y) {
+                            target.velocity.y *= -1;
+                            target.position.y = 2 + Math.sign(target.position.y - 2) * BOUNDS.y;
+                        }
+                        if (target.position.z > -1 || target.position.z < -(BOUNDS.z * 1.5)) {
+                            target.velocity.z *= -1;
+                            target.position.z = target.position.z > -1 ? -1 : -(BOUNDS.z * 1.5);
+                        }
+                    }
+                });
+            }
+
+            updateFPS();
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>
+
+

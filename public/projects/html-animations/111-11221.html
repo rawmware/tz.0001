@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotating Circular Tunnel - Commissions Open!</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: transparent; /* Set body background to transparent */
+        }
+        #background-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Ensure it is behind the WebGL canvas */
+            overflow: hidden;
+        }
+        #background-container video,
+        #background-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Ensure the media covers the entire background */
+        }
+        canvas {
+            display: block;
+        }
+        #typing-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 200px;
+            height: 1px;
+            background-color: rgba(255, 255, 255, 1);
+            color: rgb(0, 0, 0);
+            padding: 1px;
+            font-family: monospace;
+            font-weight: bold;
+            border: 2px solid black;
+            overflow: hidden;
+        }
+
+
+        #typing-container::after {
+            content: '|';
+            display: inline-block;
+            margin-left: 2px;
+            animation: blink 1s step-end infinite;
+        }
+
+
+        @keyframes blink {
+            from, to {
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+
+        #rope-container {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            width: 200px;
+            height: 100px;
+            background-color: white;
+            border: 2px solid black;
+            overflow: hidden;
+        }
+
+
+        #cone-container {
+            position: absolute;
+            top: 100px;
+            left: 10px;
+            width: 100px;
+            height: 100px;
+            background-color: white;
+            border: 2px solid black;
+            overflow: hidden;
+        }
+
+
+        #loading-container {
+            position: absolute;
+            bottom: 310px;
+            right: 10px;
+            width: 90px;
+            height: 90px;
+            background-color: white;
+            border: 2px solid black;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+
+        .wave {
+            position: relative;
+            width: 50px;
+            height: 40px;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+
+        .wave div {
+            width: 5px;
+            height: 100%;
+            background: black;
+            border-radius: 3px;
+            animation: wave 1.2s infinite ease-in-out;
+        }
+
+
+        .wave div:nth-child(1) { animation-delay: 0s; }
+        .wave div:nth-child(2) { animation-delay: 0.2s; }
+        .wave div:nth-child(3) { animation-delay: 0.4s; }
+        .wave div:nth-child(4) { animation-delay: 0.6s; }
+        .wave div:nth-child(5) { animation-delay: 0.8s; }
+
+
+        @keyframes wave {
+            0%, 100% {
+                transform: scaleY(0.3);
+            }
+            50% {
+                transform: scaleY(1);
+            }
+        }
+
+
+        /* New window for spinner animation */
+        #spinner-container {
+            position: absolute;
+            bottom: 210px;
+            right: 10px;
+            width: 90px;
+            height: 90px;
+            background-color: white;
+            border: 2px solid black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+
+        /* CSS animation for the spinner */
+        .spinner-7 {
+            --d: 22px;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background-color: transparent;
+            box-shadow:
+                calc(1 * var(--d))      calc(0 * var(--d))     0 0,
+                calc(0.707 * var(--d))  calc(0.707 * var(--d)) 0 1px,
+                calc(0 * var(--d))      calc(1 * var(--d))     0 2px,
+                calc(-0.707 * var(--d)) calc(0.707 * var(--d)) 0 3px,
+                calc(-1 * var(--d))     calc(0 * var(--d))     0 4px,
+                calc(-0.707 * var(--d)) calc(-0.707 * var(--d))0 5px,
+                calc(0 * var(--d))      calc(-1 * var(--d))    0 6px;
+            animation: s7 1s infinite steps(8);
+        }
+
+
+        @keyframes s7 {
+            100% { transform: rotate(1turn); }
+        }
+
+
+        /* New window for shuriken animation */
+        #shuriken-container {
+            position: absolute;
+            bottom: 110px;
+            right: 10px;
+            width: 90px;
+            height: 90px;
+            background-color: white;
+            border: 2px solid black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+
+        /* Shuriken animation */
+        .shuriken-4 {
+            width: calc(80px * 0.797);
+            height: calc(80px * 0.707);
+            background: black; /* Black color for the shuriken */
+            clip-path: polygon(0 0, 50% 20%, 100% 0, 80% 50%, 100% 100%, 50% 80%, 0 100%, 20% 50%);
+            -webkit-mask:
+                radial-gradient(circle closest-side,#0000 92%,#000) top   /100% 33.4%,
+                radial-gradient(circle closest-side,#0000 92%,#000) left  /33.4%  33.4%,
+                radial-gradient(circle 5px         ,#0000 92%,#000) center/33.3%  33.3%,
+                radial-gradient(circle closest-side,#0000 92%,#000) right /33.4%  33.4%,
+                radial-gradient(circle closest-side,#0000 92%,#000) bottom/100% 33.4%;
+            -webkit-mask-repeat:no-repeat;
+            animation: sh4 1.5s infinite linear;
+        }
+
+
+        @keyframes sh4 {
+            100% { transform: rotate(1turn); }
+        }
+
+
+        /* New window for sphere and torus animation */
+        #sphere-torus-container {
+            position: absolute;
+            bottom: 410px;
+            right: 10px;
+            width: 90px;
+            height: 90px;
+            background-color: white;
+            border: 2px solid black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+
+        /* New window for ASCII Matrix rain animation */
+        #matrix-rain-container {
+            position: absolute;
+            bottom: -500px;
+            right: 10px;
+            width: 90px;
+            height: 90px;
+            background-color: white;
+            border: 2px solid black;
+            overflow: hidden;
+            font-family: monospace;
+            color: black;
+            line-height: 1;
+        }
+
+
+        .matrix-column {
+            position: absolute;
+            top: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            animation: matrix-fall linear infinite;
+        }
+
+
+        @keyframes matrix-fall {
+            0% {
+                transform: translateY(-100%);
+            }
+            100% {
+                transform: translateY(100%);
+            }
+        }
+
+
+        /* New window for WebGL tube animation */
+        #tube-container {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 90px;
+            height: 90px;
+            background-color: white;
+            border: 2px solid black;
+            overflow: hidden;
+        }
+
+
+    </style>
+</head>
+<body>
+    <div id="background-container"></div> <!-- Container for background media -->
+    <div id="typing-container"></div>
+    <div id="rope-container"></div>
+    <div id="cone-container"></div>
+    <div id="loading-container">
+        <div class="wave">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+    </div>
+
+
+    <!-- New container for spinner animation -->
+    <div id="spinner-container">
+        <div class="spinner-7"></div>
+    </div>
+
+
+    <!-- New container for shuriken animation -->
+    <div id="shuriken-container">
+        <div class="shuriken-4"></div>
+    </div>
+
+
+    <!-- New container for sphere and torus animation -->
+    <div id="sphere-torus-container"></div>
+
+
+    <!-- New container for ASCII Matrix rain animation -->
+    <div id="matrix-rain-container"></div>
+
+
+    <!-- New container for WebGL tube animation -->
+    <div id="tube-container"></div>
+
+
+    <!-- Hidden file input for video selection -->
+    <input type="file" id="video-input" accept="video/*,image/*" style="display: none;">
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Initialize the rotating circular tunnel
+        let scene, camera, renderer, tunnelGroup;
+        const tunnelRadius = 13;
+        const tunnelLength = 300;
+        let speed = 0.5;
+        let rotationSpeed = 0.01;
+        const textContent = "Commissions Open!";
+        const segments = 70;
+
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 10;
+            camera.lookAt(0, 0, -1);
+
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); // Set alpha to true for transparency
+            renderer.setClearColor(0x000000, 0); // Set clear color to transparent
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+
+            tunnelGroup = new THREE.Group();
+
+
+            const loader = new THREE.FontLoader();
+            loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', function (font) {
+                const textGeometry = new THREE.TextGeometry(textContent, {
+                    font: font,
+                    size: 1,
+                    height: 0.1,
+                    curveSegments: 1
+                });
+
+
+                for (let i = 0; i < segments; i++) {
+                    const segmentZPos = -i * -5;
+                    for (let j = 0; j < 6; j++) {
+                        const angle = (j / 6) * Math.PI * 2;
+                        const x = Math.cos(angle) * tunnelRadius;
+                        const y = Math.sin(angle) * tunnelRadius;
+
+
+                        const textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+                        textMesh.position.set(x, y, segmentZPos);
+                        textMesh.rotation.x = Math.PI / 3;
+                        textMesh.rotation.y = angle + Math.PI / 3;
+                        textMesh.scale.x = -1;
+
+
+                        tunnelGroup.add(textMesh);
+                    }
+                }
+
+
+                scene.add(tunnelGroup);
+            });
+
+
+            // Add event listener to the sphere-torus-container
+            document.getElementById('sphere-torus-container').addEventListener('click', () => {
+                document.getElementById('video-input').click();
+            });
+
+
+            animate();
+            startTypingAnimation();
+        }
+
+
+        // Handle video and image selection
+        document.getElementById('video-input').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const fileType = file.type.split('/')[0];
+                if (fileType === 'video') {
+                    handleVideo(file);
+                } else if (fileType === 'image') {
+                    handleImage(file);
+                }
+            }
+        });
+
+
+        function handleVideo(file) {
+            const video = document.createElement('video');
+            video.src = URL.createObjectURL(file);
+            video.load();
+            video.muted = true; // Mute the video to allow autoplay on mobile
+            video.loop = true;
+            video.playsInline = true; // Ensure video plays inline
+            video.setAttribute('webkit-playsinline', ''); // iOS specific inline play
+
+
+            const backgroundContainer = document.getElementById('background-container');
+            backgroundContainer.innerHTML = ''; // Clear previous content
+            backgroundContainer.appendChild(video);
+
+
+            // Attempt to autoplay the video
+            video.play().catch(() => {
+                // If autoplay fails, set up a fallback
+                document.getElementById('loading-container').addEventListener('click', () => {
+                    video.play();
+                }, { once: true });
+            });
+        }
+
+
+        function handleImage(file) {
+            const image = new Image();
+            image.src = URL.createObjectURL(file);
+            image.onload = function() {
+                const backgroundContainer = document.getElementById('background-container');
+                backgroundContainer.innerHTML = ''; // Clear previous content
+                backgroundContainer.appendChild(image);
+            };
+        }
+
+
+        let hue = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+
+
+            tunnelGroup.children.forEach((mesh) => {
+                mesh.position.z += speed;
+                if (mesh.position.z > 10) {
+                    mesh.position.z -= tunnelLength;
+                }
+
+
+                hue += 0.00005;
+                mesh.material.color.setHSL((hue + mesh.position.z / 100) % 1, 1, 0.5);
+            });
+
+
+            tunnelGroup.rotation.z += rotationSpeed;
+            renderer.render(scene, camera);
+        }
+
+
+        function startTypingAnimation() {
+            const typingContainer = document.getElementById('typing-container');
+            const message = "Rawmware is accepting all commissions, 2D and 3D animations, CODE, webpage design, 3D models, and video editing! DM @ Rawmware";
+            let index = 0;
+
+
+            function type() {
+                if (index < message.length) {
+                    typingContainer.textContent += message[index];
+                    index++;
+                    typingContainer.style.height = 'auto';
+                    typingContainer.style.height = typingContainer.scrollHeight + 'px';
+                    setTimeout(type, 5);
+                } else {
+                    setTimeout(() => {
+                        typingContainer.textContent = '';
+                        index = 0;
+                        typingContainer.style.height = '10px';
+                        type();
+                    }, 2000);
+                }
+            }
+
+
+            type();
+        }
+
+
+        // Handle window resizing
+        window.addEventListener('resize', function () {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        });
+
+
+        // Initialize the rope animation
+        function initRope() {
+            const ropeScene = new THREE.Scene();
+            const ropeCamera = new THREE.PerspectiveCamera(75, 2, 0.1, 1000);
+            const ropeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            ropeRenderer.setSize(200, 100);
+            document.getElementById('rope-container').appendChild(ropeRenderer.domElement);
+
+
+            const helixGroup = new THREE.Group();
+            const helixMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
+
+
+            const helixRadius = 10;
+            const helixHeight = 20;
+            const helixTurns = 6;
+            const segments = 100;
+
+
+            for (let i = 0; i < segments; i++) {
+                const angle = (i / segments) * Math.PI * 2 * helixTurns;
+                const x = Math.cos(angle) * helixRadius;
+                const y = Math.sin(angle) * helixRadius;
+                const z = (i / segments) * helixHeight - helixHeight / 2;
+
+
+                const geometry = new THREE.CylinderGeometry(0.1, 0.1, 1, 8);
+                const cylinder = new THREE.Mesh(geometry, helixMaterial);
+                cylinder.position.set(x, y, z);
+                cylinder.rotation.z = angle;
+
+
+                helixGroup.add(cylinder);
+            }
+
+
+            ropeScene.add(helixGroup);
+            ropeCamera.position.set(0, 0, 15);
+            ropeCamera.lookAt(0, 0, 0);
+
+
+            function animateRope() {
+                requestAnimationFrame(animateRope);
+                helixGroup.rotation.z += 0.1;
+
+
+                ropeCamera.position.x = Math.sin(Date.now() * 0.001) * 5;
+                ropeCamera.position.y = Math.cos(Date.now() * 0.001) * 5;
+                ropeCamera.lookAt(0, 0, 0);
+
+
+                ropeRenderer.render(ropeScene, ropeCamera);
+            }
+
+
+            animateRope();
+        }
+
+
+        // Initialize the cone animation
+        function initCone() {
+            const coneScene = new THREE.Scene();
+            const coneCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+            const coneRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            coneRenderer.setSize(130, 130);
+            document.getElementById('cone-container').appendChild(coneRenderer.domElement);
+
+
+            const coneMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
+            let coneGeometry = new THREE.CylinderGeometry(0, 3, 10, 5, 1);
+            const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+            coneScene.add(cone);
+
+
+            coneCamera.position.z = 12;
+            coneCamera.position.x = 2.0;
+            coneCamera.position.y = -1.5;
+
+
+            let increasing = true;
+
+
+            function animateCone() {
+                requestAnimationFrame(animateCone);
+
+
+                let radiusTop = cone.geometry.parameters.radiusTop;
+
+
+                if (increasing) {
+                    radiusTop = Math.min(radiusTop + 0.05, 3);
+                    if (radiusTop >= 3) {
+                        increasing = false;
+                    }
+                } else {
+                    radiusTop = Math.max(radiusTop - 0.05, 0);
+                    if (radiusTop <= 0) {
+                        increasing = true;
+                    }
+                }
+
+
+                cone.geometry.dispose();
+                cone.geometry = new THREE.CylinderGeometry(radiusTop, 3, 10, 5, 1);
+
+
+                cone.rotation.y -= 0.1;
+                coneRenderer.render(coneScene, coneCamera);
+            }
+
+
+            animateCone();
+        }
+
+
+        // Initialize the sphere and torus animation
+        function initSphereTorus() {
+            const sphereTorusScene = new THREE.Scene();
+            const sphereTorusCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+            const sphereTorusRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            sphereTorusRenderer.setSize(90, 90);
+            document.getElementById('sphere-torus-container').appendChild(sphereTorusRenderer.domElement);
+
+
+            // Create a black wireframe sphere with reduced polygons
+            const sphereGeometry = new THREE.SphereGeometry(1.5, 8, 8); // Reduced segments
+            const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
+            const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            sphereTorusScene.add(sphere);
+
+
+            // Create a torus with rainbow color changing
+            const torusGeometry = new THREE.TorusGeometry(2.5, 0.2, 16, 100);
+            const torusMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+            const torus = new THREE.Mesh(torusGeometry, torusMaterial);
+            sphereTorusScene.add(torus);
+
+
+            sphereTorusCamera.position.z = 5;
+
+
+            let hue = 0;
+            function animateSphereTorus() {
+                requestAnimationFrame(animateSphereTorus);
+
+
+                // Rotate the sphere and torus
+                sphere.rotation.x += 0.00;
+                sphere.rotation.y += 0.1;
+                torus.rotation.x += 0.1;
+                torus.rotation.y += 0.0;
+
+
+                // Change the torus color to rainbow
+                hue += 0.01;
+                torus.material.color.setHSL(hue % 1, 1, 0.5);
+
+
+                sphereTorusRenderer.render(sphereTorusScene, sphereTorusCamera);
+            }
+
+
+            animateSphereTorus();
+        }
+
+
+        // Initialize the ASCII Matrix rain animation
+        function initMatrixRain() {
+            const container = document.getElementById('matrix-rain-container');
+            const columns = Math.floor(container.offsetWidth / 10);
+
+
+            for (let i = 0; i < columns; i++) {
+                const column = document.createElement('div');
+                column.className = 'matrix-column';
+                column.style.left = `${i * 10}px`; // Corrected with backticks
+                column.style.animationDuration = `${Math.random() * 3 + 2}s`; // Corrected with backticks
+                container.appendChild(column);
+
+
+                setInterval(() => {
+                    const char = String.fromCharCode(0x30A0 + Math.floor(Math.random() * 96));
+                    column.textContent = char + column.textContent;
+                    if (column.textContent.length > 20) {
+                        column.textContent = column.textContent.slice(0, 20);
+                    }
+                }, 100);
+            }
+        }
+
+
+        // Initialize the WebGL tube animation
+        function initTube() {
+            const tubeScene = new THREE.Scene();
+            const tubeCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+            const tubeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            tubeRenderer.setSize(90, 90);
+            document.getElementById('tube-container').appendChild(tubeRenderer.domElement);
+
+
+            class CustomSinCurve extends THREE.Curve {
+                constructor(scale = 1) {
+                    super();
+                    this.scale = scale;
+                }
+
+
+                getPoint(t, optionalTarget = new THREE.Vector3()) {
+                    const tx = t * 3 - 1.5;
+                    const ty = Math.sin(2 * Math.PI * t);
+                    const tz = 0;
+                    return optionalTarget.set(tx, ty, tz).multiplyScalar(this.scale);
+                }
+            }
+
+
+            const path = new CustomSinCurve(1);
+            const tubeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
+            let segments = 1;
+            let increasing = true;
+            let tubeGeometry = new THREE.TubeGeometry(path, segments, 0.2, 8, false);
+            const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
+            tubeScene.add(tube);
+
+
+            tubeCamera.position.z = 5;
+
+
+            function animateTube() {
+                requestAnimationFrame(animateTube);
+
+
+                // Update segments more slowly
+                if (increasing) {
+                    segments += 0.7;
+                    if (segments >= 15) increasing = false;
+                } else {
+                    segments -= 0.7;
+                    if (segments <= 1) increasing = true;
+                }
+
+
+                // Update tube geometry
+                tube.geometry.dispose();
+                tube.geometry = new THREE.TubeGeometry(path, Math.round(segments), 0.2, 8, false);
+
+
+                // Rotate tube
+                tube.rotation.y -= 0.0;
+
+
+                tubeRenderer.render(tubeScene, tubeCamera);
+            }
+
+
+            animateTube();
+        }
+
+
+        // Start animations
+        init();
+        initCone();
+        initRope();
+        initSphereTorus();
+        initMatrixRain();
+        initTube();
+    </script>
+</body>
+</html>
+
+
+
+
+

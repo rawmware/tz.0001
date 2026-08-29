@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile Shader Animation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+        canvas {
+            display: block;
+        }
+        #render_area, #overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            background-color: transparent;
+        }
+        #defaultCanvas0 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+
+
+        .os-window {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            width: 200px;
+            height: 200px;
+            background-color: transparent;
+            border: 1px solid #666;
+            border-radius: 3px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+
+        .title-bar {
+            height: 25px;
+            background-color: #d4d0c8;
+            border-bottom: 1px solid #666;
+            display: flex;
+            align-items: center;
+            padding: 0 5px;
+        }
+
+
+        .title-text {
+            font-family: "Times New Roman", Times, serif;
+            font-style: italic;
+            font-size: 14px;
+            color: black;
+            flex-grow: 1;
+            margin-left: 5px;
+            font-weight: bold;
+        }
+
+
+        .window-buttons {
+            display: flex;
+            gap: 4px;
+        }
+
+
+        .window-button {
+            width: 12px;
+            height: 12px;
+            border: 1px solid #666;
+            border-radius: 2px;
+            background-color: #fff;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+
+        /* Window button icons */
+        .window-button:nth-child(1)::before {
+            content: "×";
+            font-size: 10px;
+            color: #666;
+        }
+
+
+        .window-button:nth-child(2)::before {
+            content: "□";
+            font-size: 8px;
+            color: #666;
+        }
+
+
+        .window-button:nth-child(3)::before {
+            content: "_";
+            font-size: 8px;
+            color: #666;
+            position: relative;
+            top: -2px;
+        }
+
+
+        .window-content {
+            flex-grow: 1;
+            background-color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 400px;
+            overflow: hidden;
+        }
+
+
+        .animated-text {
+            font-family: "Times New Roman", serif;
+            font-size: 24px;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(255,255,255,0.5);
+            transform-style: preserve-3d;
+            animation: float 4s ease-in-out infinite;
+            position: relative;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+
+        .animated-text::before {
+            content: "RawmWare.OS\A(v.01)";
+            white-space: pre;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            color: rgba(255,255,255,0.5);
+            transform: translateZ(-5px);
+            animation: glitch 3s infinite;
+        }
+
+
+        .animated-text::after {
+            content: "RawmWare.OS\A(v.01)";
+            white-space: pre;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            color: rgba(255,255,255,0.3);
+            transform: translateZ(5px);
+            animation: glitch 2s infinite reverse;
+        }
+
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateZ(20px) rotateX(10deg) rotateY(10deg);
+            }
+            50% {
+                transform: translateZ(20px) rotateX(-10deg) rotateY(-10deg);
+            }
+        }
+
+
+        @keyframes glitch {
+            0%, 100% {
+                transform: translateZ(-5px) translateX(0) translateY(0);
+                opacity: 1;
+            }
+            33% {
+                transform: translateZ(-5px) translateX(2px) translateY(-2px);
+                opacity: 0.8;
+            }
+            66% {
+                transform: translateZ(-5px) translateX(-2px) translateY(2px);
+                opacity: 0.9;
+            }
+        }
+
+
+        .toolbar {
+            height: 30px;
+            background-color: #d4d0c8;
+            border-top: 1px solid #666;
+            display: flex;
+            align-items: center;
+            padding: 0 5px;
+            gap: 5px;
+        }
+
+
+        .tool-button {
+            width: 40px;
+            height: 24px;
+            border: 1px solid #666;
+            border-radius: 2px;
+            background-color: #f0f0f0;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+
+        /* Tool button icons */
+        .tool-button:nth-child(1)::before {
+            content: "℞";
+            font-size: 16px;
+        }
+
+
+        .tool-button:nth-child(2)::before {
+            content: "{*-*}";
+            font-size: 12px;
+        }
+
+
+        .tool-button:nth-child(3)::before {
+            content: "[°-°]";
+            font-size: 12px;
+        }
+
+
+        .tool-button:nth-child(4)::before {
+            content: ">-<";
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="render_area"></canvas>
+    <canvas id="overlay"></canvas>
+   
+    <div class="os-window">
+        <div class="title-bar">
+            <div class="window-buttons">
+                <div class="window-button"></div>
+                <div class="window-button"></div>
+                <div class="window-button"></div>
+            </div>
+            <div class="title-text">RawmWare.OS</div>
+        </div>
+        <div class="window-content">
+            <div class="animated-text">RawmWare.OS
+(v.01)</div>
+        </div>
+        <div class="toolbar">
+            <div class="tool-button"></div>
+            <div class="tool-button"></div>
+            <div class="tool-button"></div>
+            <div class="tool-button"></div>
+        </div>
+    </div>
+   
+<script>
+let mySize;
+let theShader;
+
+
+const vert = `
+attribute vec3 aPosition;
+attribute vec2 aTexCoord;
+void main() {
+  vec4 positionVec4 = vec4(aPosition, 1.0);
+  positionVec4.xy = positionVec4.xy * 2.0 - 1.0;
+  gl_Position = positionVec4;
+}`;
+
+
+const frag = `
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform int u_frame;
+
+
+#define pi 3.14159
+#define MAX_STEPS 100
+#define MAX_DIST 100.0
+#define SURF_DIST 2.1
+
+
+mat2 Rot(float a) {
+    float s=sin(a), c=cos(a);
+    return mat2(c, -s, s, c);
+}
+
+
+float sdBox(vec3 p, vec3 s) {
+    float a = atan(p.z, p.x);
+    float b = atan(p.z, p.y);
+    p = 1.1 + .1 * cos(p  + p.x * 8. + u_time)-s;
+    return length(max(p, 0.))+min(max(p.x, max(p.y, p.z)), 0.);
+}
+
+
+float GetDist(vec3 p) {
+    float centerDist = length(p.xz);
+    float d = sdBox(p, vec3(1));
+    d = mix(length(p) - 2., d, .5 + 0.5 * exp(-centerDist));
+    return 1. * d;
+}
+
+
+float RayMarch(vec3 ro, vec3 rd) {
+    float dO=0.;
+   
+    for(int i=0; i<MAX_STEPS; i++) {
+        vec3 p = ro + rd*dO;
+        float dS = GetDist(p);
+        dO += dS;
+        if(dO>MAX_DIST || abs(dS)<SURF_DIST) break;
+    }
+   
+    return dO;
+}
+
+
+vec3 GetNormal(vec3 p) {
+    float d = GetDist(p);
+    vec2 e = vec2(.001, 0);
+   
+    vec3 n = d - vec3(
+        GetDist(p-e.xyy),
+        GetDist(p-e.yxy),
+        GetDist(p-e.yyx));
+   
+    return normalize(n);
+}
+
+
+vec3 GetRayDir(vec2 uv, vec3 p, vec3 l, float z) {
+    vec3 f = normalize(l-p),
+        r = normalize(cross(vec3(0,1,0), f)),
+        u = cross(f,r),
+        c = f*z,
+        i = c + uv.x*r + uv.y*u,
+        d = normalize(i);
+    return d;
+}
+
+
+vec3 Bg(vec3 rd) {
+    float k = rd.y*.5 + .5;
+    vec3 col = mix(vec3(.5,0.,0.),vec3(0.),k);
+    return col;
+}
+
+
+void main() {
+    vec2 uv = (gl_FragCoord.xy- 2.0*u_resolution.xy)/u_resolution.y;
+    vec3 ro = vec3(4.0, 2.0, 2.0);
+   
+    vec3 rd = GetRayDir(uv, ro, vec3(-1.0,0.,0), .5);
+    vec3 col = vec3(0);
+   
+    float d = RayMarch(ro, rd);
+
+
+    if(d<MAX_DIST) {
+        vec3 p = ro + rd * d;
+        vec3 n = GetNormal(p);
+        vec3 r = reflect(rd, n);
+        vec3 rf = refract(rd, n,0.2);
+       
+        float dif = dot(n, normalize(vec3(1,2,3)))*.5+.5;
+        col = 0.42 *vec3(dif);
+         
+        float centerFade = exp(-length(p.xz) * 0.5);
+        col.r += (0.15 + .3 * cos(10. * rf.y + 4. * u_time - 3.1415 / 2.)) * centerFade;
+        col.g += (0.15 + .3 * cos(10. * rf.y + 4. * u_time)) * centerFade;
+        col.b += (0.15 + .3 * cos(10. * rf.y + 4. * u_time + 3.1415 / 2.)) * centerFade;
+    }
+   
+    col = pow(col, vec3(.5545));    
+    gl_FragColor = vec4(col,1.0);
+}`;
+
+
+function preload(){
+    theShader = new p5.Shader(this.renderer,vert,frag);
+}
+
+
+function setup() {
+    mySize = min(windowWidth, windowHeight)*1.0;
+    createCanvas(windowWidth, windowHeight, WEBGL);
+    noStroke();
+   
+    setupBackgroundAnimation();
+    setupCoordinateAnimation();
+}
+
+
+function setupBackgroundAnimation() {
+    const bgCanvas = document.getElementById('render_area');
+    const overlayCanvas = document.getElementById('overlay');
+    const gl = bgCanvas.getContext('webgl', {
+        alpha: true,
+        premultipliedAlpha: false
+    });
+    const ctx = overlayCanvas.getContext('2d');
+
+
+    // ... (keep all the shape-related code) ...
+
+
+    // Update the fragment shader to support transparency
+    const fragmentShaderSource = `
+        precision mediump float;
+        uniform vec4 u_color;
+        void main() {
+            gl_FragColor = vec4(1.0, 1.0, 1.0, 0.5); // Semi-transparent white
+        }
+    `;
+
+
+    // ... (keep shader setup code) ...
+
+
+    function renderShapes(time) {
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+       
+        const positions = [];
+        for (let shape of shapes) {
+            positions.push(...createCircleVertices(shape));
+        }
+
+
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.DYNAMIC_DRAW);
+        gl.clearColor(0.0, 0.0, 0.0, 0.0); // Transparent background
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.uniform4f(colorLocation, 1, 1, 1, 0.5); // Semi-transparent white
+        gl.uniform1f(scaleLocation, 1.56);
+        gl.drawArrays(gl.LINE_LOOP, 0, positions.length / 2);
+
+
+        drawCoordinates();
+    }
+
+
+    // ... (keep the rest of the animation code) ...
+}
+
+
+function setupCoordinateAnimation() {
+    const overlayCanvas = document.getElementById('overlay');
+    const ctx = overlayCanvas.getContext('2d');
+
+
+    let shapes = [];
+    const circleSize = 0.003;
+    const minShapes = 4;
+    const maxShapes = 20;
+    const forceFieldPadding = 0.3;
+
+
+    function resizeCanvas() {
+        overlayCanvas.width = 600;
+        overlayCanvas.height = 700;
+    }
+    resizeCanvas();
+
+
+    function createShape() {
+        return {
+            x: Math.random() * (1 - 2 * forceFieldPadding) + forceFieldPadding,
+            y: Math.random() * (1 - 2 * forceFieldPadding) + forceFieldPadding,
+            velocityX: (Math.random() - 0.5) * 0.003,
+            velocityY: (Math.random() - 0.5) * 0.003,
+            size: circleSize
+        };
+    }
+
+
+    function updateShapes() {
+        const targetNumShapes = minShapes + Math.floor(Math.random() * (maxShapes - minShapes));
+       
+        while (shapes.length < targetNumShapes) shapes.push(createShape());
+        if (shapes.length > targetNumShapes) shapes.splice(targetNumShapes);
+       
+        shapes.forEach(shape => {
+            shape.x += shape.velocityX;
+            shape.y += shape.velocityY;
+           
+            if (shape.x < forceFieldPadding || shape.x > 1 - forceFieldPadding) {
+                shape.velocityX *= -1;
+                shape.x = Math.max(Math.min(shape.x, 1 - forceFieldPadding), forceFieldPadding);
+            }
+           
+            if (shape.y < forceFieldPadding || shape.y > 1 - forceFieldPadding) {
+                shape.velocityY *= -1;
+                shape.y = Math.max(Math.min(shape.y, 1 - forceFieldPadding), forceFieldPadding);
+            }
+        });
+    }
+
+
+    function drawShapes() {
+        ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+       
+        // Draw lines between points
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 2;
+        shapes.forEach((shape, i) => {
+            if (i === 0) {
+                ctx.moveTo(shape.x * overlayCanvas.width, shape.y * overlayCanvas.height);
+            } else {
+                ctx.lineTo(shape.x * overlayCanvas.width, shape.y * overlayCanvas.height);
+            }
+        });
+        ctx.closePath();
+        ctx.stroke();
+
+
+        // Draw circles and coordinates
+        shapes.forEach(shape => {
+            // Convert coordinate to 0-99 range with faster counting
+            let coord = Math.floor(shape.x * 100 * 2);
+           
+            // Make coordinate count backwards after reaching 99
+            coord = coord > 99 ? 99 - (coord - 99) : coord;
+           
+            // Ensure coordinate stays positive
+            coord = Math.abs(coord % 100);
+
+
+            // Draw circle
+            ctx.beginPath();
+            ctx.arc(
+                shape.x * overlayCanvas.width,
+                shape.y * overlayCanvas.height,
+                4,
+                0,
+                Math.PI * 2
+            );
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+
+            // Draw single coordinate number
+            ctx.font = '16px Arial';
+            ctx.fillStyle = 'white';
+            const coordText = `${coord}°`;
+            ctx.fillText(coordText, shape.x * overlayCanvas.width + 10, shape.y * overlayCanvas.height - 10);
+        });
+    }
+
+
+    function animate() {
+        updateShapes();
+        drawShapes();
+        requestAnimationFrame(animate);
+    }
+
+
+    animate();
+}
+
+
+function draw() {  
+    shader(theShader);
+   
+    theShader.setUniform("u_resolution", [width, height]);
+    theShader.setUniform("u_time", millis() / 500.0);
+    theShader.setUniform("u_frame", frameCount/1.0);
+
+
+    rect(0,0,width, height);
+}
+
+
+function windowResized(){
+    resizeCanvas(windowWidth, windowHeight);
+}
+</script>
+</body>
+</html>
+
+

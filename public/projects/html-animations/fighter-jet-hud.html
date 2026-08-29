@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>FIGHTER JET HUD SYSTEM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000000;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            font-family: 'Consolas', 'Courier New', monospace;
+            color: #FFFFFF;
+        }
+
+        #hudCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .hud-text {
+            position: absolute;
+            color: #FFFFFF;
+            font-family: monospace;
+            font-size: 12px;
+            text-shadow: none;
+            pointer-events: none;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="hudCanvas"></canvas>
+    
+    <script>
+        const canvas = document.getElementById('hudCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // HUD State
+        let frame = 0;
+        let altitude = 15000;
+        let speed = 450;
+        let heading = 90;
+        let pitch = 0;
+        let roll = 0;
+        let targetLocked = false;
+        let targetX = 0.5;
+        let targetY = 0.5;
+        let targetVX = 0.002;
+        let targetVY = 0.001;
+        
+        // Resize canvas
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Draw functions
+        function drawCenterReticle() {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            
+            // Main crosshair
+            ctx.beginPath();
+            // Center circle
+            ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Center dot
+            ctx.beginPath();
+            ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
+            
+            // Crosshair lines with gaps
+            const lineLength = 50;
+            const gap = 20;
+            
+            // Top line
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - gap);
+            ctx.lineTo(cx, cy - lineLength);
+            ctx.stroke();
+            
+            // Bottom line
+            ctx.beginPath();
+            ctx.moveTo(cx, cy + gap);
+            ctx.lineTo(cx, cy + lineLength);
+            ctx.stroke();
+            
+            // Left line
+            ctx.beginPath();
+            ctx.moveTo(cx - gap, cy);
+            ctx.lineTo(cx - lineLength, cy);
+            ctx.stroke();
+            
+            // Right line
+            ctx.beginPath();
+            ctx.moveTo(cx + gap, cy);
+            ctx.lineTo(cx + lineLength, cy);
+            ctx.stroke();
+            
+            // Diagonal marks
+            const diagDist = 30;
+            const markSize = 5;
+            
+            for (let angle = 45; angle < 360; angle += 90) {
+                const rad = angle * Math.PI / 180;
+                const x1 = cx + Math.cos(rad) * diagDist;
+                const y1 = cy + Math.sin(rad) * diagDist;
+                const x2 = cx + Math.cos(rad) * (diagDist + markSize);
+                const y2 = cy + Math.sin(rad) * (diagDist + markSize);
+                
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+        }
+
+        function drawPitchLadder() {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(roll * Math.PI / 180);
+            
+            // Draw horizon line
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-200, -pitch * 5);
+            ctx.lineTo(200, -pitch * 5);
+            ctx.stroke();
+            
+            // Draw pitch lines
+            ctx.lineWidth = 1;
+            ctx.font = '10px monospace';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'right';
+            
+            for (let i = -90; i <= 90; i += 10) {
+                if (i === 0) continue; // Skip horizon
+                
+                const y = -(pitch - i) * 5;
+                const lineWidth = i % 30 === 0 ? 80 : 40;
+                
+                if (Math.abs(y) < canvas.height / 2) {
+                    ctx.beginPath();
+                    
+                    if (i > 0) {
+                        // Above horizon - solid lines
+                        ctx.moveTo(-lineWidth, y);
+                        ctx.lineTo(-10, y);
+                        ctx.moveTo(10, y);
+                        ctx.lineTo(lineWidth, y);
+                    } else {
+                        // Below horizon - dashed lines
+                        ctx.setLineDash([5, 5]);
+                        ctx.moveTo(-lineWidth, y);
+                        ctx.lineTo(-10, y);
+                        ctx.moveTo(10, y);
+                        ctx.lineTo(lineWidth, y);
+                        ctx.setLineDash([]);
+                    }
+                    
+                    ctx.stroke();
+                    
+                    // Pitch angle text
+                    if (i % 30 === 0) {
+                        ctx.fillText(Math.abs(i) + '°', -lineWidth - 5, y + 3);
+                        ctx.textAlign = 'left';
+                        ctx.fillText(Math.abs(i) + '°', lineWidth + 5, y + 3);
+                        ctx.textAlign = 'right';
+                    }
+                }
+            }
+            
+            ctx.restore();
+        }
+
+        function drawAltitudeTape() {
+            const x = canvas.width - 100;
+            const cy = canvas.height / 2;
+            const tapeHeight = 300;
+            
+            // Draw tape background outline
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x - 10, cy - tapeHeight/2, 80, tapeHeight);
+            
+            // Draw altitude scale
+            ctx.font = '11px monospace';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'right';
+            
+            const altRange = 500; // Show +/- 500ft
+            const pixelsPerFoot = tapeHeight / (altRange * 2);
+            
+            for (let alt = Math.floor((altitude - altRange) / 100) * 100; 
+                 alt <= altitude + altRange; 
+                 alt += 100) {
+                
+                const y = cy - (alt - altitude) * pixelsPerFoot;
+                
+                if (y > cy - tapeHeight/2 && y < cy + tapeHeight/2) {
+                    // Draw tick mark
+                    ctx.beginPath();
+                    ctx.moveTo(x - 10, y);
+                    ctx.lineTo(x, y);
+                    ctx.stroke();
+                    
+                    // Draw altitude value
+                    if (alt % 500 === 0) {
+                        ctx.fillText(alt, x + 50, y + 3);
+                        
+                        // Longer tick for 500ft intervals
+                        ctx.beginPath();
+                        ctx.moveTo(x - 20, y);
+                        ctx.lineTo(x, y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            // Current altitude box
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(x - 5, cy - 15, 70, 30);
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x - 5, cy - 15, 70, 30);
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '14px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(Math.floor(altitude), x + 30, cy + 3);
+            
+            // Altitude label
+            ctx.font = '10px monospace';
+            ctx.fillText('ALT', x + 30, cy - 170);
+            ctx.fillText('FT', x + 30, cy + 170);
+        }
+
+        function drawSpeedTape() {
+            const x = 100;
+            const cy = canvas.height / 2;
+            const tapeHeight = 300;
+            
+            // Draw tape background outline
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x - 70, cy - tapeHeight/2, 80, tapeHeight);
+            
+            // Draw speed scale
+            ctx.font = '11px monospace';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'left';
+            
+            const speedRange = 50; // Show +/- 50 knots
+            const pixelsPerKnot = tapeHeight / (speedRange * 2);
+            
+            for (let spd = Math.floor((speed - speedRange) / 10) * 10; 
+                 spd <= speed + speedRange; 
+                 spd += 10) {
+                
+                const y = cy - (spd - speed) * pixelsPerKnot;
+                
+                if (y > cy - tapeHeight/2 && y < cy + tapeHeight/2) {
+                    // Draw tick mark
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + 10, y);
+                    ctx.stroke();
+                    
+                    // Draw speed value
+                    if (spd % 50 === 0) {
+                        ctx.fillText(spd, x - 50, y + 3);
+                        
+                        // Longer tick for 50kt intervals
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x + 20, y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            // Current speed box
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(x - 65, cy - 15, 70, 30);
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x - 65, cy - 15, 70, 30);
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '14px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(Math.floor(speed), x - 30, cy + 3);
+            
+            // Speed label
+            ctx.font = '10px monospace';
+            ctx.fillText('IAS', x - 30, cy - 170);
+            ctx.fillText('KTS', x - 30, cy + 170);
+        }
+
+        function drawHeadingCompass() {
+            const cx = canvas.width / 2;
+            const y = 80;
+            const width = 400;
+            
+            // Draw compass tape
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx - width/2, y);
+            ctx.lineTo(cx + width/2, y);
+            ctx.stroke();
+            
+            // Draw heading marks
+            ctx.font = '10px monospace';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'center';
+            
+            for (let hdg = -60; hdg <= 60; hdg += 10) {
+                const actualHeading = (heading + hdg + 360) % 360;
+                const x = cx + hdg * 3;
+                
+                // Draw tick mark
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x, y + (hdg % 30 === 0 ? 15 : 10));
+                ctx.stroke();
+                
+                // Draw heading value
+                if (hdg % 30 === 0) {
+                    const headingText = actualHeading === 0 ? 'N' :
+                                       actualHeading === 90 ? 'E' :
+                                       actualHeading === 180 ? 'S' :
+                                       actualHeading === 270 ? 'W' :
+                                       Math.floor(actualHeading / 10).toString().padStart(2, '0');
+                    
+                    ctx.fillText(headingText, x, y + 25);
+                }
+            }
+            
+            // Current heading indicator
+            ctx.beginPath();
+            ctx.moveTo(cx - 10, y - 10);
+            ctx.lineTo(cx + 10, y - 10);
+            ctx.lineTo(cx, y);
+            ctx.closePath();
+            ctx.stroke();
+            
+            // Heading readout
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(cx - 30, y - 35, 60, 20);
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(cx - 30, y - 35, 60, 20);
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '12px monospace';
+            ctx.fillText(Math.floor(heading).toString().padStart(3, '0') + '°', cx, y - 20);
+        }
+
+        function drawTargetBox() {
+            // Update target position
+            targetX += targetVX;
+            targetY += targetVY;
+            
+            if (targetX < 0.2 || targetX > 0.8) targetVX *= -1;
+            if (targetY < 0.2 || targetY > 0.8) targetVY *= -1;
+            
+            const tx = targetX * canvas.width;
+            const ty = targetY * canvas.height;
+            const size = 60;
+            
+            ctx.strokeStyle = targetLocked ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)';
+            ctx.lineWidth = targetLocked ? 2 : 1;
+            
+            if (targetLocked) {
+                // Draw diamond shape for locked target
+                ctx.beginPath();
+                ctx.moveTo(tx, ty - size);
+                ctx.lineTo(tx + size, ty);
+                ctx.lineTo(tx, ty + size);
+                ctx.lineTo(tx - size, ty);
+                ctx.closePath();
+                ctx.stroke();
+                
+                // Draw inner diamond
+                const innerSize = size * 0.6;
+                ctx.beginPath();
+                ctx.moveTo(tx, ty - innerSize);
+                ctx.lineTo(tx + innerSize, ty);
+                ctx.lineTo(tx, ty + innerSize);
+                ctx.lineTo(tx - innerSize, ty);
+                ctx.closePath();
+                ctx.stroke();
+                
+                // Blinking LOCK indicator
+                if (Math.floor(frame / 30) % 2 === 0) {
+                    ctx.font = '12px monospace';
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('LOCK', tx, ty - size - 10);
+                }
+            } else {
+                // Draw scanning box
+                ctx.strokeRect(tx - size/2, ty - size/2, size, size);
+                
+                // Corner brackets
+                const cornerSize = 15;
+                ctx.lineWidth = 2;
+                
+                // Top-left
+                ctx.beginPath();
+                ctx.moveTo(tx - size/2, ty - size/2 + cornerSize);
+                ctx.lineTo(tx - size/2, ty - size/2);
+                ctx.lineTo(tx - size/2 + cornerSize, ty - size/2);
+                ctx.stroke();
+                
+                // Top-right
+                ctx.beginPath();
+                ctx.moveTo(tx + size/2 - cornerSize, ty - size/2);
+                ctx.lineTo(tx + size/2, ty - size/2);
+                ctx.lineTo(tx + size/2, ty - size/2 + cornerSize);
+                ctx.stroke();
+                
+                // Bottom-left
+                ctx.beginPath();
+                ctx.moveTo(tx - size/2, ty + size/2 - cornerSize);
+                ctx.lineTo(tx - size/2, ty + size/2);
+                ctx.lineTo(tx - size/2 + cornerSize, ty + size/2);
+                ctx.stroke();
+                
+                // Bottom-right
+                ctx.beginPath();
+                ctx.moveTo(tx + size/2 - cornerSize, ty + size/2);
+                ctx.lineTo(tx + size/2, ty + size/2);
+                ctx.lineTo(tx + size/2, ty + size/2 - cornerSize);
+                ctx.stroke();
+            }
+            
+            // Target info
+            ctx.font = '10px monospace';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'left';
+            ctx.fillText('TGT 01', tx + size + 10, ty - 20);
+            ctx.fillText(`RNG ${(Math.random() * 10 + 5).toFixed(1)} NM`, tx + size + 10, ty - 5);
+            ctx.fillText(`BRG ${Math.floor(Math.random() * 360)}°`, tx + size + 10, ty + 10);
+            ctx.fillText(`CLR ${Math.floor(Math.random() * 30 + 10)}K`, tx + size + 10, ty + 25);
+        }
+
+        function drawFlightData() {
+            const x = 50;
+            const y = canvas.height - 100;
+            
+            ctx.font = '12px monospace';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'left';
+            
+            // G-Force indicator
+            const gForce = 1 + Math.sin(frame * 0.02) * 0.5;
+            ctx.fillText(`G ${gForce.toFixed(1)}`, x, y);
+            
+            // Mach number
+            const mach = speed / 667;
+            ctx.fillText(`M ${mach.toFixed(2)}`, x, y + 20);
+            
+            // AOA (Angle of Attack)
+            const aoa = 5 + Math.sin(frame * 0.03) * 3;
+            ctx.fillText(`AOA ${aoa.toFixed(1)}°`, x, y + 40);
+            
+            // Fuel
+            ctx.fillText(`FUEL ${Math.floor(8500 - frame * 0.5)} LBS`, x, y + 60);
+        }
+
+        function drawWeaponStatus() {
+            const x = canvas.width - 200;
+            const y = canvas.height - 100;
+            
+            ctx.font = '11px monospace';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'left';
+            
+            ctx.fillText('MASTER ARM: ON', x, y);
+            ctx.fillText('GUN: 578 RDS', x, y + 20);
+            ctx.fillText('AIM-9X: 2', x, y + 40);
+            ctx.fillText('AIM-120: 4', x, y + 60);
+            
+            // Selected weapon box
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x - 5, y + 30, 100, 15);
+        }
+
+        function drawWarnings() {
+            const cx = canvas.width / 2;
+            const y = canvas.height - 50;
+            
+            // Flashing warnings
+            if (Math.floor(frame / 20) % 3 === 0) {
+                ctx.font = '14px monospace';
+                ctx.fillStyle = '#FFFFFF';
+                ctx.textAlign = 'center';
+                
+                if (altitude < 5000) {
+                    ctx.fillText('LOW ALTITUDE', cx, y);
+                } else if (speed > 500) {
+                    ctx.fillText('OVERSPEED', cx, y);
+                }
+            }
+        }
+
+        function drawRangeRings() {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 0.5;
+            ctx.setLineDash([5, 10]);
+            
+            // Draw range rings
+            for (let i = 1; i <= 3; i++) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, i * 100, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            ctx.setLineDash([]);
+        }
+
+        function drawBankIndicator() {
+            const cx = canvas.width / 2;
+            const cy = 200;
+            const radius = 80;
+            
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1;
+            
+            // Draw arc
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, Math.PI * 0.8, Math.PI * 0.2);
+            ctx.stroke();
+            
+            // Draw bank marks
+            const angles = [-60, -30, -20, -10, 0, 10, 20, 30, 60];
+            angles.forEach(angle => {
+                const rad = (180 - angle) * Math.PI / 180;
+                const x1 = cx + Math.cos(rad) * radius;
+                const y1 = cy - Math.sin(rad) * radius;
+                const x2 = cx + Math.cos(rad) * (radius + (angle % 30 === 0 ? 10 : 5));
+                const y2 = cy - Math.sin(rad) * (radius + (angle % 30 === 0 ? 10 : 5));
+                
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            });
+            
+            // Draw bank pointer (triangle)
+            const pointerAngle = (180 - roll) * Math.PI / 180;
+            const px = cx + Math.cos(pointerAngle) * (radius - 10);
+            const py = cy - Math.sin(pointerAngle) * (radius - 10);
+            
+            ctx.beginPath();
+            ctx.moveTo(px, py);
+            const size = 8;
+            ctx.lineTo(px - size * Math.sin(pointerAngle), py - size * Math.cos(pointerAngle));
+            ctx.lineTo(px + size * Math.sin(pointerAngle), py + size * Math.cos(pointerAngle));
+            ctx.closePath();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
+        }
+
+        function animate() {
+            frame++;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Update flight parameters
+            altitude += Math.sin(frame * 0.01) * 10;
+            speed += Math.sin(frame * 0.02) * 2;
+            heading = (heading + 0.1) % 360;
+            pitch = Math.sin(frame * 0.01) * 10;
+            roll = Math.sin(frame * 0.015) * 20;
+            
+            // Toggle target lock
+            if (frame % 180 === 0) {
+                targetLocked = !targetLocked;
+            }
+            
+            // Draw all HUD elements
+            drawRangeRings();
+            drawPitchLadder();
+            drawCenterReticle();
+            drawAltitudeTape();
+            drawSpeedTape();
+            drawHeadingCompass();
+            drawBankIndicator();
+            drawTargetBox();
+            drawFlightData();
+            drawWeaponStatus();
+            drawWarnings();
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
