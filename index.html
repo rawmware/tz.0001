@@ -11,17 +11,21 @@
 <body>
 <div id='app'>
     <aside class='rail'>
-        <div class='brand'>TZ</div>
-        <nav aria-label='Primary'>
+        <div class='brand-lockup'>
+            <img class='brand-logo' src='/logo.png' alt='TZ home'>
+            <button id='menuBtn' class='menu-btn' type='button' aria-label='Open menu' aria-expanded='false' aria-controls='primaryNav'><span></span><span></span><span></span></button>
+        </div>
+        <nav id='primaryNav' aria-label='Primary'>
             <button class='nav active' data-view='chat'>Chat</button>
             <button class='nav' data-view='monitor'>Monitoring</button>
+            <button class='nav' data-view='portfolio'>Portfolio</button>
         </nav>
         <div class='rail-foot'><span class='dot'></span><span>Local-first runtime</span></div>
     </aside>
     <main>
         <section id='chatView' class='view active'>
             <header class='welcome'>
-                <div class='tz-mark'>TZ</div>
+                <img class='welcome-logo' src='/logo.png' alt='' aria-hidden='true'>
                 <div class='welcome-copy'>
                     <p id='status' aria-live='polite'>TZ ready · checking this device</p>
                     <small>Copy-ready answers · <span id='chatMode'>Auto routing</span></small>
@@ -121,6 +125,28 @@
                     </form>
                 </div>
             </article>
+        </section>
+
+        <section id='portfolioView' class='view portfolio-view'>
+            <header class='portfolio-head'>
+                <img class='portfolio-logo' src='/logo.png' alt='TZ'>
+                <div><p class='kicker'>BUILT BY ROMAN</p><h1>Portfolio</h1><p>Experiments, interfaces, and local software—collected under one roof.</p></div>
+            </header>
+
+            <section class='portfolio-section'>
+                <div class='section-title'><div><p class='kicker'>01 / FEATURED COLLECTION</p><h2>HTML Animations</h2></div><a href='https://github.com/rawmware/HTML-animations' target='_blank' rel='noreferrer'>View repository ↗</a></div>
+                <div id='animationGrid' class='animation-grid'></div>
+            </section>
+
+            <section class='portfolio-section'>
+                <div class='section-title'><div><p class='kicker'>02 / PROJECTS</p><h2>Repositories</h2></div></div>
+                <div class='repo-grid'>
+                    <a class='repo-card' href='https://github.com/rawmware/tz.0001' target='_blank' rel='noreferrer'><span>LOCAL SOFTWARE</span><h3>TZ</h3><p>A local-first browser workspace built to run on the hardware already in your hands.</p><strong>Open repository ↗</strong></a>
+                    <a class='repo-card' href='https://github.com/rawmware/AI-VISUAL-DETECTECTION-BY-ROM' target='_blank' rel='noreferrer'><span>COMPUTER VISION</span><h3>Visual Detection</h3><p>A visual detection experiment by Roman, bringing camera input and machine perception together.</p><strong>Open repository ↗</strong></a>
+                    <a class='repo-card' href='https://github.com/rawmware/OPEN-RAWM-AI-APPLIACTION' target='_blank' rel='noreferrer'><span>DESKTOP SYSTEM</span><h3>OpenRAWM</h3><p>A modular desktop application with automation, messaging, screen tools, and original visual systems.</p><strong>Open repository ↗</strong></a>
+                    <a class='repo-card' href='https://github.com/rawmware/HTML-animations' target='_blank' rel='noreferrer'><span>INTERACTIVE DESIGN</span><h3>HTML Animations</h3><p>A growing archive of browser-native interfaces, motion studies, games, and visual experiments.</p><strong>Open repository ↗</strong></a>
+                </div>
+            </section>
         </section>
     </main>
 </div>
