@@ -1255,11 +1255,41 @@ prompt.addEventListener('keydown', event => {
 });
 
 const navButtons = [...document.querySelectorAll<HTMLButtonElement>('.nav')];
-navButtons.forEach(button => button.addEventListener('click', () => {
+const menuBtn = document.getElementById('menuBtn') as HTMLButtonElement;
+const primaryNav = document.getElementById('primaryNav') as HTMLElement;
+const selectView = (button: HTMLButtonElement) => {
     navButtons.forEach(item => item.classList.toggle('active', item === button));
     document.querySelectorAll('.view').forEach(view => view.classList.remove('active'));
     document.getElementById(`${button.dataset.view}View`)?.classList.add('active');
-}));
+    primaryNav.classList.remove('open');
+    menuBtn.setAttribute('aria-expanded', 'false');
+    history.replaceState(null, '', button.dataset.view === 'chat' ? location.pathname : `#${button.dataset.view}`);
+};
+navButtons.forEach(button => button.addEventListener('click', () => selectView(button)));
+menuBtn.addEventListener('click', () => {
+    const open = primaryNav.classList.toggle('open');
+    menuBtn.setAttribute('aria-expanded', String(open));
+});
+
+const animationFiles = [
+    '1-1-1.html', '10101010101011.html', '111-11221.html', 'AASZZ.html', 'FPS AIM TRAINER.html',
+    'MOBILE ANIMATION.html', 'SERIAL EXPERIMENT LAIN - MOBILE WEBCAM PREVIEW.html', 'alphayo.html',
+    'character_generator.html', 'connected lines and sound wave.html', 'connections-animation.html',
+    'data tracking v1.1.html', 'facial-tracking-p5.html', 'fake login screen.html', 'fighter-jet-hud.html',
+    'hand animation using geo-nodes and lines.html', 'multiple animations and custom image loader.html',
+    'pixel liquid.html', 'tactical-military-ui.html', 'webcam preview - serial experiment lain inspiration.html',
+    'windows 7 webcam preview.html', 'wpm game.html',
+];
+const projectTitle = (file: string) => file.replace(/\.html$/i, '').replace(/[-_]/g, ' ').replace(/\b\w/g, value => value.toUpperCase());
+const animationGrid = document.getElementById('animationGrid');
+if (animationGrid) animationGrid.innerHTML = animationFiles.map((file, index) => {
+    const url = `/projects/html-animations/${encodeURIComponent(file)}`;
+    return `<article class='project-card'><a class='project-preview' href='${url}' target='_blank' rel='noreferrer' aria-label='Open ${escapeHtml(projectTitle(file))}'><iframe src='${url}' title='' tabindex='-1' loading='lazy' sandbox='allow-scripts'></iframe><span>Open experiment ↗</span></a><div class='project-meta'><small>${String(index + 1).padStart(2, '0')}</small><h3>${escapeHtml(projectTitle(file))}</h3></div></article>`;
+}).join('');
+
+const initialView = location.hash === '#portfolio' ? 'portfolio' : location.hash === '#monitor' ? 'monitor' : 'chat';
+const initialButton = navButtons.find(button => button.dataset.view === initialView);
+if (initialButton) selectView(initialButton);
 
 applyPreset();
 syncApiPanel();
