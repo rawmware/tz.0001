@@ -4,8 +4,8 @@
     <meta charset='UTF-8'>
     <meta name='viewport' content='width=device-width,initial-scale=1.0,viewport-fit=cover'>
     <meta name='theme-color' content='#e9e3d8'>
-    <meta name='description' content='TZ is a local-first everyday AI that runs on your hardware and can optionally use your own free-tier AI account.'>
-    <title>TZ</title>
+    <meta name='description' content='TZ builds practical AI systems and security-minded software for organizations ready to work smarter.'>
+    <title>TZ — Secure AI, built for real work</title>
     <link rel='stylesheet' href='./src/styles.css'>
 </head>
 <body>
@@ -16,14 +16,62 @@
             <button id='menuBtn' class='menu-btn' type='button' aria-label='Open menu' aria-expanded='false' aria-controls='primaryNav'><span></span><span></span><span></span></button>
         </div>
         <nav id='primaryNav' aria-label='Primary'>
-            <button class='nav active' data-view='chat'>Chat</button>
+            <button class='nav active' data-view='home'>Overview</button>
+            <button class='nav' data-view='chat'>Chat</button>
             <button class='nav' data-view='monitor'>Monitoring</button>
             <button class='nav' data-view='portfolio'>Portfolio</button>
         </nav>
         <div class='rail-foot'><span class='dot'></span><span>Local-first runtime</span></div>
     </aside>
     <main>
-        <section id='chatView' class='view active'>
+        <section id='homeView' class='view active home-view'>
+            <header class='home-hero'>
+                <div class='hero-copy'>
+                    <p class='kicker'>TZ / SECURITY + INTELLIGENCE</p>
+                    <h1>Build smarter.<br><em>Operate safer.</em></h1>
+                    <p class='hero-lede'>TZ designs practical AI systems and security-minded software for teams that need speed without giving up control.</p>
+                    <div class='hero-actions'>
+                        <button class='primary-action' type='button' data-open-view='chat'>Experience TZ</button>
+                        <a class='secondary-action' href='#capabilities'>Explore capabilities</a>
+                    </div>
+                </div>
+                <div class='signal-panel' aria-label='TZ operating principles'>
+                    <div class='signal-top'><span>PRIVATE BY DESIGN</span><span class='live-signal'>ACTIVE</span></div>
+                    <div class='signal-mark'><img src='/logo.png' alt='' aria-hidden='true'></div>
+                    <div class='signal-grid'>
+                        <div><small>01</small><strong>Local-first</strong><span>Keep sensitive work close to the hardware you control.</span></div>
+                        <div><small>02</small><strong>Purpose-built</strong><span>Systems shaped around your workflow—not generic demos.</span></div>
+                        <div><small>03</small><strong>Security-led</strong><span>Risk, access, and resilience considered from day one.</span></div>
+                    </div>
+                </div>
+            </header>
+
+            <section class='trust-line' aria-label='TZ focus areas'>
+                <span>AI DEVELOPMENT</span><span>SECURITY CONSULTING</span><span>LOCAL INTELLIGENCE</span><span>WORKFLOW AUTOMATION</span>
+            </section>
+
+            <section id='capabilities' class='capabilities-section'>
+                <div class='section-intro'><p class='kicker'>WHAT WE BUILD</p><h2>Technology that fits the business.</h2><p>From an early idea to a working system, TZ turns complex technical problems into focused tools people can actually use.</p></div>
+                <div class='capability-list'>
+                    <article><span>01</span><div><h3>Custom AI development</h3><p>Private assistants, knowledge tools, intelligent workflows, and local-first experiences built around a clear business outcome.</p></div></article>
+                    <article><span>02</span><div><h3>Security consulting</h3><p>Practical reviews of exposure, access, device strategy, and operational risk—with clear priorities your team can act on.</p></div></article>
+                    <article><span>03</span><div><h3>Prototype to product</h3><p>Fast, polished prototypes that prove the experience, expose the risks, and create a credible path to deployment.</p></div></article>
+                </div>
+            </section>
+
+            <section class='approach-section'>
+                <div><p class='kicker'>THE TZ APPROACH</p><h2>Your data should work for you—not travel farther than it has to.</h2></div>
+                <div class='approach-copy'><p>TZ starts with the workflow, the people using it, and the information that needs protection. The result is a system that is fast enough for everyday work, understandable enough to trust, and flexible enough to grow.</p><button class='text-action' type='button' data-open-view='portfolio'>See selected work <span>↗</span></button></div>
+            </section>
+
+            <section class='home-cta'>
+                <p class='kicker'>SEE THE PRODUCT</p>
+                <h2>The future of AI is useful, private, and already running.</h2>
+                <button class='primary-action inverse' type='button' data-open-view='chat'>Open TZ Chat</button>
+            </section>
+        </section>
+
+        <section id='chatView' class='view'>
             <header class='welcome'>
                 <img class='welcome-logo' src='/logo.png' alt='' aria-hidden='true'>
                 <div class='welcome-copy'>
