@@ -16,61 +16,13 @@
             <button id='menuBtn' class='menu-btn' type='button' aria-label='Open menu' aria-expanded='false' aria-controls='primaryNav'><span></span><span></span><span></span></button>
         </div>
         <nav id='primaryNav' aria-label='Primary'>
-            <button class='nav active' data-view='home'>Overview</button>
+            <button class='nav active' data-view='portfolio'>Portfolio</button>
             <button class='nav' data-view='chat'>Chat</button>
             <button class='nav' data-view='monitor'>Monitoring</button>
-            <button class='nav' data-view='portfolio'>Portfolio</button>
         </nav>
         <div class='rail-foot'><span class='dot'></span><span>Local-first runtime</span></div>
     </aside>
     <main>
-        <section id='homeView' class='view active home-view'>
-            <header class='home-hero'>
-                <div class='hero-copy'>
-                    <p class='kicker'>TZ / SECURITY + INTELLIGENCE</p>
-                    <h1>Build smarter.<br><em>Operate safer.</em></h1>
-                    <p class='hero-lede'>TZ designs practical AI systems and security-minded software for teams that need speed without giving up control.</p>
-                    <div class='hero-actions'>
-                        <button class='primary-action' type='button' data-open-view='chat'>Experience TZ</button>
-                        <a class='secondary-action' href='#capabilities'>Explore capabilities</a>
-                    </div>
-                </div>
-                <div class='signal-panel' aria-label='TZ operating principles'>
-                    <div class='signal-top'><span>PRIVATE BY DESIGN</span><span class='live-signal'>ACTIVE</span></div>
-                    <div class='signal-mark'><img src='/logo.png' alt='' aria-hidden='true'></div>
-                    <div class='signal-grid'>
-                        <div><small>01</small><strong>Local-first</strong><span>Keep sensitive work close to the hardware you control.</span></div>
-                        <div><small>02</small><strong>Purpose-built</strong><span>Systems shaped around your workflow—not generic demos.</span></div>
-                        <div><small>03</small><strong>Security-led</strong><span>Risk, access, and resilience considered from day one.</span></div>
-                    </div>
-                </div>
-            </header>
-
-            <section class='trust-line' aria-label='TZ focus areas'>
-                <span>AI DEVELOPMENT</span><span>SECURITY CONSULTING</span><span>LOCAL INTELLIGENCE</span><span>WORKFLOW AUTOMATION</span>
-            </section>
-
-            <section id='capabilities' class='capabilities-section'>
-                <div class='section-intro'><p class='kicker'>WHAT WE BUILD</p><h2>Technology that fits the business.</h2><p>From an early idea to a working system, TZ turns complex technical problems into focused tools people can actually use.</p></div>
-                <div class='capability-list'>
-                    <article><span>01</span><div><h3>Custom AI development</h3><p>Private assistants, knowledge tools, intelligent workflows, and local-first experiences built around a clear business outcome.</p></div></article>
-                    <article><span>02</span><div><h3>Security consulting</h3><p>Practical reviews of exposure, access, device strategy, and operational risk—with clear priorities your team can act on.</p></div></article>
-                    <article><span>03</span><div><h3>Prototype to product</h3><p>Fast, polished prototypes that prove the experience, expose the risks, and create a credible path to deployment.</p></div></article>
-                </div>
-            </section>
-
-            <section class='approach-section'>
-                <div><p class='kicker'>THE TZ APPROACH</p><h2>Your data should work for you—not travel farther than it has to.</h2></div>
-                <div class='approach-copy'><p>TZ starts with the workflow, the people using it, and the information that needs protection. The result is a system that is fast enough for everyday work, understandable enough to trust, and flexible enough to grow.</p><button class='text-action' type='button' data-open-view='portfolio'>See selected work <span>↗</span></button></div>
-            </section>
-
-            <section class='home-cta'>
-                <p class='kicker'>SEE THE PRODUCT</p>
-                <h2>The future of AI is useful, private, and already running.</h2>
-                <button class='primary-action inverse' type='button' data-open-view='chat'>Open TZ Chat</button>
-            </section>
-        </section>
-
         <section id='chatView' class='view'>
             <header class='welcome'>
                 <img class='welcome-logo' src='/logo.png' alt='' aria-hidden='true'>
@@ -175,19 +127,30 @@
             </article>
         </section>
 
-        <section id='portfolioView' class='view portfolio-view'>
+        <section id='portfolioView' class='view active portfolio-view'>
             <header class='portfolio-head'>
                 <img class='portfolio-logo' src='/logo.png' alt='TZ'>
-                <div><p class='kicker'>BUILT BY ROMAN</p><h1>Portfolio</h1><p>Experiments, interfaces, and local software—collected under one roof.</p></div>
+                <div class='portfolio-intro'>
+                    <p class='kicker'>TZ / BUILT BY ROMAN</p>
+                    <h1>Ideas made<br><em>real.</em></h1>
+                    <p>Independent software, private AI, security-minded systems, and browser experiments built to turn new ideas into useful products.</p>
+                    <div class='portfolio-actions'><button class='primary-action' type='button' data-open-view='chat'>Try TZ</button><a href='#selected-work'>View selected work</a></div>
+                </div>
             </header>
 
-            <section class='portfolio-section'>
-                <div class='section-title'><div><p class='kicker'>01 / FEATURED COLLECTION</p><h2>HTML Animations</h2></div><a href='https://github.com/rawmware/HTML-animations' target='_blank' rel='noreferrer'>View repository ↗</a></div>
+            <section class='portfolio-services' aria-label='Services and capabilities'>
+                <article><span>01</span><h2>AI Development</h2><p>Local-first assistants and focused automation designed around the work—not the hype.</p></article>
+                <article><span>02</span><h2>Security Consulting</h2><p>Practical reviews of access, exposure, device strategy, and operational risk.</p></article>
+                <article><span>03</span><h2>Product Prototyping</h2><p>Working interfaces that make an idea tangible, testable, and ready for its next stage.</p></article>
+            </section>
+
+            <section id='selected-work' class='portfolio-section'>
+                <div class='section-title'><div><p class='kicker'>SELECTED WORK / 01</p><h2>Browser experiments</h2></div><a href='https://github.com/rawmware/HTML-animations' target='_blank' rel='noreferrer'>Full collection ↗</a></div>
                 <div id='animationGrid' class='animation-grid'></div>
             </section>
 
             <section class='portfolio-section'>
-                <div class='section-title'><div><p class='kicker'>02 / PROJECTS</p><h2>Repositories</h2></div></div>
+                <div class='section-title'><div><p class='kicker'>SELECTED WORK / 02</p><h2>Systems</h2></div></div>
                 <div class='repo-grid'>
                     <a class='repo-card' href='https://github.com/rawmware/tz.0001' target='_blank' rel='noreferrer'><span>LOCAL SOFTWARE</span><h3>TZ</h3><p>A local-first browser workspace built to run on the hardware already in your hands.</p><strong>Open repository ↗</strong></a>
                     <a class='repo-card' href='https://github.com/rawmware/AI-VISUAL-DETECTECTION-BY-ROM' target='_blank' rel='noreferrer'><span>COMPUTER VISION</span><h3>Visual Detection</h3><p>A visual detection experiment by Roman, bringing camera input and machine perception together.</p><strong>Open repository ↗</strong></a>
