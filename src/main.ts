@@ -1263,7 +1263,7 @@ const selectView = (button: HTMLButtonElement) => {
     document.getElementById(`${button.dataset.view}View`)?.classList.add('active');
     primaryNav.classList.remove('open');
     menuBtn.setAttribute('aria-expanded', 'false');
-    history.replaceState(null, '', button.dataset.view === 'home' ? location.pathname : `#${button.dataset.view}`);
+    window.history.replaceState(null, '', button.dataset.view === 'home' ? location.pathname : `#${button.dataset.view}`);
     window.scrollTo({ top: 0, behavior: 'auto' });
     if (button.dataset.view === 'chat' && !engine && !enginePromise && !cpuGenerator && !cpuPromise) void loadHardware().then(scheduleWarmup);
 };
