@@ -1263,7 +1263,7 @@ const selectView = (button: HTMLButtonElement) => {
     document.getElementById(`${button.dataset.view}View`)?.classList.add('active');
     primaryNav.classList.remove('open');
     menuBtn.setAttribute('aria-expanded', 'false');
-    window.history.replaceState(null, '', button.dataset.view === 'home' ? location.pathname : `#${button.dataset.view}`);
+    window.history.replaceState(null, '', button.dataset.view === 'portfolio' ? location.pathname : `#${button.dataset.view}`);
     window.scrollTo({ top: 0, behavior: 'auto' });
     if (button.dataset.view === 'chat' && !engine && !enginePromise && !cpuGenerator && !cpuPromise) void loadHardware().then(scheduleWarmup);
 };
@@ -1278,22 +1278,19 @@ menuBtn.addEventListener('click', () => {
 });
 
 const animationFiles = [
-    '1-1-1.html', '10101010101011.html', '111-11221.html', 'AASZZ.html', 'FPS AIM TRAINER.html',
-    'MOBILE ANIMATION.html', 'SERIAL EXPERIMENT LAIN - MOBILE WEBCAM PREVIEW.html', 'alphayo.html',
-    'character_generator.html', 'connected lines and sound wave.html', 'connections-animation.html',
-    'data tracking v1.1.html', 'facial-tracking-p5.html', 'fake login screen.html', 'fighter-jet-hud.html',
-    'hand animation using geo-nodes and lines.html', 'multiple animations and custom image loader.html',
-    'pixel liquid.html', 'tactical-military-ui.html', 'webcam preview - serial experiment lain inspiration.html',
-    'windows 7 webcam preview.html', 'wpm game.html',
+    '1-1-1.html', '10101010101011.html', 'fighter-jet-hud.html',
+    'pixel liquid.html', 'facial-tracking-p5.html', 'tactical-military-ui.html',
 ];
+const projectKinds = ['GENERATIVE', 'WEBGL', 'INTERFACE', 'MOTION', 'VISION', 'SYSTEM'];
 const projectTitle = (file: string) => file.replace(/\.html$/i, '').replace(/[-_]/g, ' ').replace(/\b\w/g, value => value.toUpperCase());
 const animationGrid = document.getElementById('animationGrid');
 if (animationGrid) animationGrid.innerHTML = animationFiles.map((file, index) => {
     const url = `/projects/html-animations/${encodeURIComponent(file)}`;
-    return `<article class='project-card'><a class='project-preview' href='${url}' target='_blank' rel='noreferrer' aria-label='Open ${escapeHtml(projectTitle(file))}'><iframe src='${url}' title='' tabindex='-1' loading='lazy' sandbox='allow-scripts'></iframe><span>Open experiment ↗</span></a><div class='project-meta'><small>${String(index + 1).padStart(2, '0')}</small><h3>${escapeHtml(projectTitle(file))}</h3></div></article>`;
+    const title = projectTitle(file);
+    return `<article class='project-card project-${index + 1}'><a class='project-preview' href='${url}' target='_blank' rel='noreferrer' aria-label='Open ${escapeHtml(title)}'><span class='project-kind'>${projectKinds[index]}</span><strong>${escapeHtml(title)}</strong><i>Open experiment ↗</i></a><div class='project-meta'><small>${String(index + 1).padStart(2, '0')}</small><h3>${escapeHtml(title)}</h3></div></article>`;
 }).join('');
 
-const initialView = location.hash === '#portfolio' ? 'portfolio' : location.hash === '#monitor' ? 'monitor' : location.hash === '#chat' ? 'chat' : 'home';
+const initialView = location.hash === '#monitor' ? 'monitor' : location.hash === '#chat' ? 'chat' : 'portfolio';
 const initialButton = navButtons.find(button => button.dataset.view === initialView);
 if (initialButton) selectView(initialButton);
 
@@ -1312,8 +1309,11 @@ addEventListener('pageshow', event => {
         clearSession();
         syncApiPanel();
     }
-    void loadHardware().then(scheduleWarmup);
+    if (document.getElementById('chatView')?.classList.contains('active')) void loadHardware().then(scheduleWarmup);
+    else void loadHardware();
 });
+window.addEventListener('beforeinstallprompt', event => event.preventDefault());
+if ('serviceWorker' in navigator) void navigator.serviceWorker.getRegistrations().then(registrations => registrations.forEach(registration => void registration.unregister()));
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && !engine && !enginePromise) void loadHardware().then(scheduleWarmup);
 });
