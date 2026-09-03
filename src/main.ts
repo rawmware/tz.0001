@@ -1263,9 +1263,15 @@ const selectView = (button: HTMLButtonElement) => {
     document.getElementById(`${button.dataset.view}View`)?.classList.add('active');
     primaryNav.classList.remove('open');
     menuBtn.setAttribute('aria-expanded', 'false');
-    history.replaceState(null, '', button.dataset.view === 'chat' ? location.pathname : `#${button.dataset.view}`);
+    history.replaceState(null, '', button.dataset.view === 'home' ? location.pathname : `#${button.dataset.view}`);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    if (button.dataset.view === 'chat' && !engine && !enginePromise && !cpuGenerator && !cpuPromise) void loadHardware().then(scheduleWarmup);
 };
 navButtons.forEach(button => button.addEventListener('click', () => selectView(button)));
+document.querySelectorAll<HTMLElement>('[data-open-view]').forEach(control => control.addEventListener('click', () => {
+    const target = navButtons.find(button => button.dataset.view === control.dataset.openView);
+    if (target) selectView(target);
+}));
 menuBtn.addEventListener('click', () => {
     const open = primaryNav.classList.toggle('open');
     menuBtn.setAttribute('aria-expanded', String(open));
@@ -1287,7 +1293,7 @@ if (animationGrid) animationGrid.innerHTML = animationFiles.map((file, index) =>
     return `<article class='project-card'><a class='project-preview' href='${url}' target='_blank' rel='noreferrer' aria-label='Open ${escapeHtml(projectTitle(file))}'><iframe src='${url}' title='' tabindex='-1' loading='lazy' sandbox='allow-scripts'></iframe><span>Open experiment ↗</span></a><div class='project-meta'><small>${String(index + 1).padStart(2, '0')}</small><h3>${escapeHtml(projectTitle(file))}</h3></div></article>`;
 }).join('');
 
-const initialView = location.hash === '#portfolio' ? 'portfolio' : location.hash === '#monitor' ? 'monitor' : 'chat';
+const initialView = location.hash === '#portfolio' ? 'portfolio' : location.hash === '#monitor' ? 'monitor' : location.hash === '#chat' ? 'chat' : 'home';
 const initialButton = navButtons.find(button => button.dataset.view === initialView);
 if (initialButton) selectView(initialButton);
 
@@ -1296,8 +1302,9 @@ syncApiPanel();
 renderMessages();
 renderTelemetry();
 renderRuntimeNow();
-void loadHardware().then(scheduleWarmup);
-addEventListener('online', () => void loadHardware().then(scheduleWarmup));
+if (initialView === 'chat') void loadHardware().then(scheduleWarmup);
+else void loadHardware();
+addEventListener('online', () => document.getElementById('chatView')?.classList.contains('active') ? void loadHardware().then(scheduleWarmup) : void loadHardware());
 addEventListener('pageshow', event => {
     if ((event as PageTransitionEvent).persisted) {
         apiConfig = null;
