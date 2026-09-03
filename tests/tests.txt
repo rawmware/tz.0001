@@ -1,64 +1,49 @@
 # Tests
 
-## Test 1 - Instant answer is copy-ready and Clear cache resets both views [sanity]
+## Test 1 - Open Home by default after reload [sanity]
+Viewport: desktop
+Covers: primary Home route, fresh-load behavior, portfolio landing content
+Description: Verifies every fresh visit opens the public-facing Home experience instead of Chat.
+
+Steps:
+1. Open the application
+2. Select Chat
+3. Refresh the page
+
+Expected: Home is selected and the "Ideas made real" landing content is visible after refresh.
+
+## Test 2 - Navigate between Home and Chat on mobile
 Viewport: mobile
-Covers: instant local tools, copy-ready answer, chat Clear cache, shared conversation and ledger reset
-Description: Verifies TZ answers a deterministic local task immediately and both reset controls operate on the same session state.
+Covers: hamburger navigation, Home label, in-app view switching
+Description: Verifies the mobile menu clearly calls the landing page Home and preserves access to Chat.
 
 Steps:
-1. Enter "What is 77x3" and submit
-2. Inspect the answer and its Copy control
-3. Click Clear cache in Chat
-4. Open Monitoring and inspect the Turn ledger
+1. Open the hamburger menu
+2. Select Chat
+3. Open the hamburger menu and select Home
 
-Expected: TZ shows 231 in a clean copy-ready response with a visible Copy button; after Clear cache, the conversation is empty and the Turn ledger says there are no turns.
+Expected: The menu contains Home, Chat, and Monitoring; Home returns to the portfolio landing experience.
 
-## Test 2 - Monitoring describes the stronger device-aware local path
-Viewport: desktop
-Covers: device-aware WebGPU model selection, dedicated worker generation, CPU/WASM emergency model, single-model memory policy
-Description: Verifies the shipped runtime no longer advertises the former 0.5B model as its quality path and clearly describes its execution policy.
-
-Steps:
-1. Open Monitoring
-2. Inspect Intelligence path and TZ execution
-3. Inspect Primary model, Emergency model, Execution thread, and Memory policy
-
-Expected: TZ selects a compatible Qwen 1.5B-class model on mobile or 3B-class model on desktop when available, identifies SmolLM2 360M as the emergency CPU/WASM path, states that only one local language model is resident, and identifies a dedicated Web Worker for quality generation.
-
-## Test 3 - Free provider presets configure a transparent Auto route
-Viewport: desktop
-Covers: free-tier provider presets, OpenRouter free router, response-mode selection, tab-only key handling, execution disclosure
-Description: Verifies connecting an optional provider is explicit, visibly configured, and does not claim that TZ supplies free usage.
-
-Steps:
-1. Open Monitoring and click Connect provider
-2. Select OpenRouter free and Auto · local + smart routing
-3. Enter "example-key" in API key and submit
-4. Inspect the connection status and API key row
-
-Expected: Endpoint and model are populated for OpenRouter, the status says OpenRouter free is connected for this tab with Auto routing active, and the API key row says the key clears on refresh.
-
-## Test 4 - Local-only mode visibly guarantees prompts stay local
+## Test 3 - Browse curated work without embedded app prompts
 Viewport: mobile
-Covers: local-only privacy control, response routing control, refresh-scoped provider configuration
-Description: Verifies the user can connect a provider while explicitly preventing TZ from sending prompts to it.
+Covers: curated project gallery, lightweight project covers, hosted project links
+Description: Verifies the Home gallery uses clean project covers instead of embedded application frames.
 
 Steps:
-1. Open Monitoring and click Connect provider
-2. Select Local only · never send prompts
-3. Inspect the chat mode label and Intelligence path
+1. Scroll to Browser experiments
+2. Inspect the six curated project covers
+3. Open the first experiment
 
-Expected: The active mode is Local only, and Monitoring explains that connected intelligence is not used while Local-only mode is selected.
+Expected: Six clean project covers are visible with no embedded frame or install card, and the selected experiment opens.
 
-## Test 5 - Connected intelligence rejects insecure endpoints
+## Test 4 - Preserve Monitoring access
 Viewport: desktop
-Covers: HTTPS endpoint validation, provider guardrail, visible configuration error
-Description: Verifies a custom connected provider cannot be configured over an insecure endpoint.
+Covers: monitoring navigation, existing runtime information
+Description: Verifies Monitoring remains accessible after Home becomes the primary route.
 
 Steps:
-1. Open Monitoring and click Connect provider
-2. Select Custom compatible API
-3. Enter "http://example.com/v1" as the endpoint with non-empty model and key values
-4. Submit the form
+1. Select Monitoring
+2. Inspect the monitoring heading
+3. Return to Home
 
-Expected: TZ refuses the configuration and visibly states that connected AI endpoints must use HTTPS.
+Expected: Monitoring displays its device/runtime information and Home remains available from primary navigation.
