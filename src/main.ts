@@ -1263,7 +1263,7 @@ const selectView = (button: HTMLButtonElement) => {
     document.getElementById(`${button.dataset.view}View`)?.classList.add('active');
     primaryNav.classList.remove('open');
     menuBtn.setAttribute('aria-expanded', 'false');
-    window.history.replaceState(null, '', button.dataset.view === 'portfolio' ? location.pathname : `#${button.dataset.view}`);
+    window.history.replaceState(null, '', button.dataset.view === 'home' ? location.pathname : `#${button.dataset.view}`);
     window.scrollTo({ top: 0, behavior: 'auto' });
     if (button.dataset.view === 'chat' && !engine && !enginePromise && !cpuGenerator && !cpuPromise) void loadHardware().then(scheduleWarmup);
 };
@@ -1290,7 +1290,8 @@ if (animationGrid) animationGrid.innerHTML = animationFiles.map((file, index) =>
     return `<article class='project-card project-${index + 1}'><a class='project-preview' href='${url}' target='_blank' rel='noreferrer' aria-label='Open ${escapeHtml(title)}'><span class='project-kind'>${projectKinds[index]}</span><strong>${escapeHtml(title)}</strong><i>Open experiment ↗</i></a><div class='project-meta'><small>${String(index + 1).padStart(2, '0')}</small><h3>${escapeHtml(title)}</h3></div></article>`;
 }).join('');
 
-const initialView = location.hash === '#monitor' ? 'monitor' : location.hash === '#chat' ? 'chat' : 'portfolio';
+// A fresh page load always starts at Home. Chat and Monitoring remain in-app destinations.
+const initialView = 'home';
 const initialButton = navButtons.find(button => button.dataset.view === initialView);
 if (initialButton) selectView(initialButton);
 
@@ -1304,6 +1305,8 @@ else void loadHardware();
 addEventListener('online', () => document.getElementById('chatView')?.classList.contains('active') ? void loadHardware().then(scheduleWarmup) : void loadHardware());
 addEventListener('pageshow', event => {
     if ((event as PageTransitionEvent).persisted) {
+        const homeButton = navButtons.find(button => button.dataset.view === 'home');
+        if (homeButton) selectView(homeButton);
         apiConfig = null;
         routingMode = 'auto';
         clearSession();
